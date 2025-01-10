@@ -1,0 +1,12 @@
+html, body
+{
+    overflow: hidden;
+    margin:0%;
+    transform: scale(100%);
+    cursor: none;
+}
+#canvas
+{
+    z-index: 0;
+    background-color: rgba(255, 255, 255, 0);
+}
