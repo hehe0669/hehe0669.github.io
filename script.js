@@ -12,29 +12,63 @@ const drawing = canvas.getContext('2d');
 
 class GameText //any object created by this class have "GameText_" at the start
 {
+    //static property and static method
+
+    static instanceList = []; //static list that store all the created instance 
+    
+
     /*
-    text => what text value is the text obj holding
-    x => x coodinate on the screen when draw
-    y => y coodinate on the screen when draw
-    fontSize => the font size of the text
-    textAlign => the alignment of the text
-    boldToggle => is the text bold? true for yes
-    italicToggle => is the text italic? true for yes
-    color => color of the text
-    borderToggle => does the text have border or not, true for yes
-    borderColor => the border color
-    borderThickness => the border thickness
-    toggleCondition => value that determine wherever the text will be draw or not, true for yes
+    GameText parameter explaination:
+
+    - Shortcut:
+    + Shortcut1 => "Number, option: 0 for no change, increasing for moving right, decreasing for moving left"
+    + Shortcut2 => "Number, option: 0 for no change, increasing for moving down, decreasing for moving up"
+
+    1. text(type: String) => what text value is the text obj holding
+
+    2. getXFomula(type: String, format option: start from the left edge = `${Shortcut1}`, start from middle
+    of the screen = `window.innerWidth / 2 + ${Shortcut1}`, start from right edge =
+    `window.innerWidth + ${Shortcut1}`) => store the fomula to get the x coodinate on the screen when draw
+
+    3. getYFomula(type: String, format option: start from the top edge = `${Shortcut2}`, start from middle
+    of the screen = `window.innerHeight / 2 + ${Shortcut2}`, start from bottom edge =
+    `window.innerHeight + ${Shortcut2}`) => store the fomula to get the y coodinate on the screen when draw
+
+    4. fontSize(type: Number, range: x >= 1) => the font size of the text
+
+    5. textAlign(type: String, option: ["left", "right", "center"]) => the alignment of the text
+
+    6. boldToggle(type: Boolean) => is the text bold? true for yes
+
+    7. italicToggle(type: Boolean) => is the text italic? true for yes
+
+    8. color(type: String, format: `${Number from 0 to 255}, {Number from 0 to 255}, {Number from 0 to 255}`)
+    => color of the text
+
+    9. borderToggle(type: Boolean) => does the text have border or not, true for yes
+
+    10. borderColor(type: String, format:
+    `${Number from 0 to 255}, {Number from 0 to 255}, {Number from 0 to 255}`) => the border color
+
+    11. borderThickness(type: Number, range: x >= 1) => the border thickness
+
+    12. toggleCondition(type: Boolean) => value that determine wherever the text will be draw or not, true
+    for yes
     */
-    constructor(text, x, y, fontSize, textAlign, boldToggle, italicToggle, color, borderToggle, borderColor, borderThickness, toggleCondition)
+    constructor(text, getXFomula, getYFomula, fontSize, textAlign, boldToggle, italicToggle, color, borderToggle, borderColor, borderThickness, toggleCondition)
     {
-        this.font = "Ubuntu";
+        this.font = "Ubuntu"; //defalut font for all GameText instance
 
 
         this.text = text;
 
-        this.x = x;
-        this.y = y;
+        //the text x and y position is initialize base on the fomula provided
+
+        this.x = eval(getXFomula);
+        this.y = eval(getYFomula);
+
+        this.getXFomula = getXFomula;
+        this.getYFomula = getYFomula;
 
         this.fontSize = fontSize;
         this.textAlign = textAlign;
@@ -48,12 +82,24 @@ class GameText //any object created by this class have "GameText_" at the start
         this.borderThickness = borderThickness;
 
         this.toggleCondition = toggleCondition;
+
+
+        //add the newly created instance to static array in this class
+        GameText.instanceList.push(this);
     }
 
     draw()
     {
         if(this.toggleCondition)
         {
+            //set up a string that will later pass to drawing.font
+            /*
+            posible combination(Note: 16px is just placeholder):
+            - "16px Ubuntu"
+            - "bold 16px Ubuntu"
+            - "italic 16px Ubuntu"
+            - "bold italic 16px Ubuntu"
+            */
             const textCostumization = `${this.boldToggle ? "bold " : ""}${this.italicToggle ? "italic " : ""}${this.fontSize}px ${this.font}`;
 
 
@@ -79,6 +125,12 @@ class GameText //any object created by this class have "GameText_" at the start
             drawing.restore();
         }
     }
+
+    adjustPositionWhenResize()
+    {
+        this.x = eval(this.getXFomula);
+        this.y = eval(this.getYFomula);
+    }
 }
 
 
@@ -89,11 +141,14 @@ class GameText //any object created by this class have "GameText_" at the start
 //store everytime about the mouse
 const mouse = 
 {
+    //mouse x and y
+
     x: 0,
     y: 0,
 
-    angle: 0,
-    holdDown: false
+    angle: 0, //store the angle that the cursor had rotated, with the center of the screen being the origin
+              //calcuated later in movemove event listener
+    holdDown: false //is mouse holding down?
 };
 
 //object store everything related to FPS and drawing delay calculation
@@ -117,44 +172,78 @@ const fpsAndDrawDelay =
 };
 
 //object used to store the world position of player, method to convert from world position to screen position,
-//and method to check if a given obj is in the player FOV
+//method to check if a given obj is in the player FOV, and method to give out change to postion change due to
+//recoil
 const position = 
 {
     /*
     +: right
     -: left
     */
-    x: 0,
+    x: 0, //player x
 
     /*
     +: up
     -: down
     */
-    y: 0,
+    y: 0, //player y
 
     //since the browser have - as up and + as down,
     //the number stored in position.y will required switchSign() function to switch sign
 
 
-    moveWhenOppositeDirection: true,
+    moveWhenOppositeDirection: true, //boolean check if the player should move when opposite direction key
+                                     //is pressed. ex: pressing key for moving right and left
+                                     //at same time. true for yes, moving direction are based on the
+                                     //opposite key that pressed later. ex: if the player press right
+                                     //then press left, the player will move left
 
 
-    right: false,
-    left: false,
+    //properties related to horizontal position change
 
-    oppositeX: false,
-    rightIsNewDirection: false,
-    leftIsNewDirection: false,
+    right: false, //moved right
+    left: false, //moved left
 
-    up: false,
-    down: false,
+    oppositeX: false, //if the player is moving right and left at the same time
 
-    oppositeY: false,
-    upIsNewDirection: false,
-    downIsNewDirection: false,
+    rightIsNewDirection: false, //is the player moved right after and while holding left
+    leftIsNewDirection: false, //is the player moved left after and while holding right
+
+    //properties related to vertical position change
+    up: false, //moved up
+    down: false, //moved down
+
+    oppositeY: false, //if the player is moving up and down at the same time
+
+    upIsNewDirection: false, //is the player moved up after and while holding down
+    downIsNewDirection: false, //is the player moved down after and while holding up
 
 
-    speed: 10,
+    speed: 5, //player movement speed
+
+    //properties related to random position when spawn
+
+    randomizedSpawn: true, //random position when spawn? true for yes
+    floatRandomizeSpawnPosition: true, //should random starting position be a float or integer? true for float
+    
+    //x and y randomized position range
+
+    highestRandomY: 100,
+    lowestRandomY: -100,
+    highestRandomX: 100,
+    lowestRandomX: -100,
+
+
+    //properties related to recoil stuff
+
+    //x and y pos if the recoil came to effect immediately
+
+    xPositionAfterRecoil: 0,
+    yPositionAfterRecoil: 0,
+
+    recoilDistanceThreadHold: 0.01, //if the distance between current pos and pos after recoil is lower
+                                    //than the threadhold, it will just move the distance between those point
+    recoilDecayingPercentage: 0.10, //percentage of the recoil that actually got affected each draw
 
 
     //check if an object is inside the player screen, return true if yes
@@ -344,6 +433,16 @@ const position =
 
                 10 - - 10 = 20
         */
+    },
+
+    getCoordinateChangeWhenRecoil()
+    {
+        const movingDistance = getDistanceWithCoordinate(position.x, position.y, position.xPositionAfterRecoil, position.yPositionAfterRecoil);
+        const movingAngle = getAngleToAimUsingTargetAndAimerCoordinate(position.x, position.y, position.xPositionAfterRecoil, position.yPositionAfterRecoil);
+
+        const movingAmount = movingDistance > this.recoilDecayingPercentage ? movingDistance * this.recoilDecayingPercentage : movingDistance;
+
+        return {x: Math.cos(movingAngle) * movingAmount, y: Math.sin(movingAngle) * movingAmount};
     }
 };
 
@@ -521,7 +620,7 @@ const bullet =
     lowestOpacity: 0,
 
     //highestSizeMultiplier have to be higher than lowestSizeMultiplier
-    highestSizeMultiplier: 50,
+    highestSizeMultiplier: 2,
     lowestSizeMultiplier: 1,
 
     durationForOpacityAndSizeChangeBeforeDespawn: 200, //the time that the bullet transist from growing and
@@ -643,7 +742,7 @@ const gun =
     borderColor: "105, 105, 108",
     borderThickness: 2.5,
 
-    recoil: 10,
+    recoil: 50,
     recoilCheck: false,
 
 
@@ -731,8 +830,8 @@ const crosshair =
 const GameText_fpsAndDelayEachFrame = new GameText
 (
     "", //text
-    window.innerWidth - 5, //x
-    window.innerHeight - 5, //y
+    "window.innerWidth - 5", //getXFomula
+    "window.innerHeight - 5", //getYFomula
     12, //fontSize
     "right", //textAlign
     true, //boldToggle
@@ -748,8 +847,8 @@ const GameText_fpsAndDelayEachFrame = new GameText
 const GameText_showPosition = new GameText
 (
     `x: ${position.x}, y: ${position.y}`, //text
-    window.innerWidth - 5, //x
-    window.innerHeight - 20, //y
+    "window.innerWidth - 5", //getXFomula
+    "window.innerHeight - 20", //getYFomula
     12, //fontSize
     "right", //textAlign
     true, //boldToggle
@@ -919,12 +1018,15 @@ window.addEventListener("resize", () =>
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    GameText_fpsAndDelayEachFrame.x = window.innerWidth - 5;
+    adjustGameTextPositionWhenScreenResize();
 });
 
 
 // functions
 
+//function related to the program
+
+//used for drawing all graphical object
 function draw() 
 {
     drawing.clearRect(0, 0, canvas.width, canvas.height);  //clear canvas at the first of each frame
@@ -984,7 +1086,7 @@ function draw()
     {
         if(Date.now() - fpsAndDrawDelay.delayTracker >= fpsAndDrawDelay.timeDelayedBetweenDraw)
         {
-            GameText_fpsAndDelayEachFrame.text = calculateFpsAndDelayBetweenFrame(Number((fpsAndDrawDelay.accumulatedDelayedTime / fpsAndDrawDelay.framePassed).toFixed(2)));
+            GameText_fpsAndDelayEachFrame.text = calculateFps(Number((fpsAndDrawDelay.accumulatedDelayedTime / fpsAndDrawDelay.framePassed).toFixed(2)));
         }
         else
         {
@@ -1007,17 +1109,20 @@ function draw()
     requestAnimationFrame(draw);
 }
 
-function calculateFpsAndDelayBetweenFrame(delayBetweenFrame)
+//used for calculating FPS
+function calculateFps(delayBetweenFrame)
 {
     return `${(1000 / delayBetweenFrame).toFixed(2)} FPS | Draw Delay: ${delayBetweenFrame}`;
 }
 
+//used for updating player position
 function changePosition()
 {
+
     if(gun.recoilCheck)
     {
-        position.x += Math.cos(mouse.angle + Math.PI) * gun.recoil;
-        position.y += -1 * Math.sin(mouse.angle + Math.PI) * gun.recoil;
+        position.xPositionAfterRecoil += Math.cos(mouse.angle + Math.PI) * gun.recoil;
+        position.yPositionAfterRecoil += -1 * Math.sin(mouse.angle + Math.PI) * gun.recoil;
 
         gun.recoilCheck = false;
     }
@@ -1026,59 +1131,59 @@ function changePosition()
     {
         position.x += position.speed * Math.SQRT1_2;
         position.y += position.speed * Math.SQRT1_2;
+        position.xPositionAfterRecoil += position.speed * Math.SQRT1_2;
+        position.yPositionAfterRecoil += position.speed * Math.SQRT1_2;
     }
     else if(position.up && position.left && (!(position.down || position.right) || position.moveWhenOppositeDirection && ((!position.oppositeX || position.oppositeX && position.leftIsNewDirection) && (!position.oppositeY || position.oppositeY && position.upIsNewDirection))))
     {
         position.x -= position.speed * Math.SQRT1_2;
         position.y += position.speed * Math.SQRT1_2;
+        position.xPositionAfterRecoil -= position.speed * Math.SQRT1_2;
+        position.yPositionAfterRecoil += position.speed * Math.SQRT1_2;
     }
     else if(position.down && position.right && (!(position.up || position.left) || position.moveWhenOppositeDirection && ((!position.oppositeX || position.oppositeX && position.rightIsNewDirection) && (!position.oppositeY || position.oppositeY && position.downIsNewDirection))))
     {
         position.x += position.speed * Math.SQRT1_2;
         position.y -= position.speed * Math.SQRT1_2;
+        position.xPositionAfterRecoil += position.speed * Math.SQRT1_2;
+        position.yPositionAfterRecoil -= position.speed * Math.SQRT1_2;
     }
     else if(position.down && position.left && (!(position.up || position.right) || position.moveWhenOppositeDirection && ((!position.oppositeX || position.oppositeX && position.leftIsNewDirection) && (!position.oppositeY || position.oppositeY && position.downIsNewDirection))))
     {
         position.x -= position.speed * Math.SQRT1_2;
         position.y -= position.speed * Math.SQRT1_2;
+        position.xPositionAfterRecoil -= position.speed * Math.SQRT1_2;
+        position.yPositionAfterRecoil -= position.speed * Math.SQRT1_2;
     }
     else if(position.right && (!position.left || (position.moveWhenOppositeDirection && (!position.oppositeX || (position.oppositeX && position.rightIsNewDirection)))))
     {
         position.x += position.speed;
+        position.xPositionAfterRecoil += position.speed;
     }
     else if(position.left && (!position.right || (position.moveWhenOppositeDirection && (!position.oppositeX || (position.oppositeX && position.leftIsNewDirection)))))
     {
         position.x -= position.speed;
+        position.xPositionAfterRecoil -= position.speed;
     }
     else if(position.up && (!position.down || (position.moveWhenOppositeDirection && (!position.oppositeY || (position.oppositeY && position.upIsNewDirection)))))
     {
         position.y += position.speed;
+        position.yPositionAfterRecoil += position.speed;
     }
     else if(position.down && (!position.up || (position.moveWhenOppositeDirection && (!position.oppositeY || (position.oppositeY && position.downIsNewDirection)))))
     {
         position.y -= position.speed;
+        position.yPositionAfterRecoil -= position.speed;
     }
+
+    const recoilChange = position.getCoordinateChangeWhenRecoil();
+
+    position.x += recoilChange.x;
+    position.y += recoilChange.y;
 }
 
-function getDistanceWithCoordinate(aimerX, aimerY, targetX, targetY)
-{
-    const changeInX = aimerX - targetX;
-    const changeInY = aimerY - targetY;
-
-    return Math.sqrt((changeInX * changeInX) + (changeInY * changeInY));
-}
-
-function getAngleToAimUsingTargetAndAimerCoordinate(aimerX, aimerY, targetX, targetY)
-{
-    return Math.atan2(targetY - aimerY, targetX - aimerX);
-}
-
-function switchSign(num)
-{
-    return num * -1;
-}
-
-function setupImg(i) //recursively load up all the image
+//used for recursively load up all the image in the game
+function setupImg(i)
 {
     if(i < imageSourceList.length)
     {
@@ -1099,8 +1204,66 @@ function setupImg(i) //recursively load up all the image
     }
 }
 
+//used for adjusting text position and screen is resized
+function adjustGameTextPositionWhenScreenResize()
+{
+    for(let i = 0; i < GameText.instanceList.length; i++)
+    {
+        GameText.instanceList[i].adjustPositionWhenResize();
+    }
+}
+
+
+//function for calculating math
+
+function getDistanceWithCoordinate(aimerX, aimerY, targetX, targetY)
+{
+    const changeInX = aimerX - targetX;
+    const changeInY = aimerY - targetY;
+
+    return Math.sqrt((changeInX * changeInX) + (changeInY * changeInY));
+}
+
+function getAngleToAimUsingTargetAndAimerCoordinate(aimerX, aimerY, targetX, targetY)
+{
+    return Math.atan2(targetY - aimerY, targetX - aimerX);
+}
+
+function switchSign(num)
+{
+    return num * -1;
+}
+
+function giveRandomVal(maxValue, minValue, decimalOrInteger) //give random number between the
+                                                             //inputed maxValue and minValue (1st and 2nd arg)
+                                                             //if decimalOrInteger is true, return float
+                                                             //else false, return int
+
+                                                             //Note: if returning float, the range is not
+                                                             //containing the maxValue and minValue
+{
+    if(decimalOrInteger)
+    {
+        return Math.random() * (maxValue - minValue) + minValue;
+    }
+    else
+    {
+        return Math.floor(Math.random() * (maxValue - minValue + 1) + minValue);
+    }
+}
+
 
 // loaded function
+
+//set up initial position
+if(position.randomizedSpawn)
+{
+    position.x = giveRandomVal(position.highestRandomX, position.lowestRandomX, position.floatRandomizeSpawnPosition);
+    position.y = giveRandomVal(position.highestRandomY, position.lowestRandomY, position.floatRandomizeSpawnPosition);
+
+    position.xPositionAfterRecoil = position.x;
+    position.yPositionAfterRecoil = position.y;
+}
 
 const imageSourceList = []; //store all the source here in string form. need to be empty.
                             //will be filled later in the next for loop
