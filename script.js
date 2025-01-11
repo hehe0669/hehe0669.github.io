@@ -148,7 +148,10 @@ const mouse =
 
     angle: 0, //store the angle that the cursor had rotated, with the center of the screen being the origin
               //calcuated later in movemove event listener
-    holdDown: false //is mouse holding down?
+    distance: 0, //store the distance between the cursor and the middle of the screen
+                 //calcuated later in movemove event listener
+    leftHoldDown: false, //is left key mouse holding down?
+    rightHoldDown: false //is right key mouse holding down?
 };
 
 //object store everything related to FPS and drawing delay calculation
@@ -246,9 +249,20 @@ const position =
     recoilDecayingPercentage: 0.10, //percentage of the recoil that actually got affected each draw
 
 
+    //properties related to the zooming toward the mouse the further the cursor are from the middle
+    //of the screen
+
+    zoomingAwayTowardMouseAngleCheck: false,
+    lowestZoom: 0,
+    highestZoom: "giveShorterSideBetweenWidthAndHeight() / 2 - (body.size * 1.5)", //fomula to get highest zoom
+    distanceForMaxedZoom: "0.5 * (giveShorterSideBetweenWidthAndHeight() / 2)",
+
+
     //check if an object is inside the player screen, return true if yes
     insideCameraFOVCheck(xPositionOnScreen, yPositionOnScreen, sizeX, sizeY)
     {
+        const zoomingShift = this.getCoordinateChangeFromZooming();
+
         //the lowest and highest posible x and y value that an object have to be in
         //in order to appear in player screen
 
@@ -282,14 +296,14 @@ const position =
         |__________________________|
         */
 
-        const leftMostXValueFromCenter = this.x + switchSign((window.innerWidth / 2) + (sizeX / 2));
-        const rightMostXValueFromCenter = this.x + ((window.innerWidth / 2) + (sizeX / 2));
-        const upMostYValueFromCenter = this.y + ((window.innerHeight / 2) + (sizeY / 2));
-        const downMostYValueFromCenter = this.y + switchSign((window.innerHeight / 2) + (sizeY / 2));
+        const leftMostXValueFromCenter = 0 + switchSign(sizeX / 2);
+        const rightMostXValueFromCenter = window.innerWidth + (sizeX / 2);
+        const upMostYValueFromCenter = 0 + switchSign(sizeY / 2);
+        const downMostYValueFromCenter = window.innerHeight + (sizeY / 2);
 
         //if the graphic object x and y is inside the most left and right posible barrier, and the most top
         //and bottom barrier, the object is in the player FOV
-        if((leftMostXValueFromCenter < xPositionOnScreen && xPositionOnScreen < rightMostXValueFromCenter) && (downMostYValueFromCenter < yPositionOnScreen && yPositionOnScreen < upMostYValueFromCenter))
+        if((leftMostXValueFromCenter < xPositionOnScreen && xPositionOnScreen < rightMostXValueFromCenter) && (upMostYValueFromCenter < yPositionOnScreen && yPositionOnScreen < downMostYValueFromCenter))
         {
             return true;
         }
@@ -443,6 +457,22 @@ const position =
         const movingAmount = movingDistance > this.recoilDecayingPercentage ? movingDistance * this.recoilDecayingPercentage : movingDistance;
 
         return {x: Math.cos(movingAngle) * movingAmount, y: Math.sin(movingAngle) * movingAmount};
+    },
+
+    getCoordinateChangeFromZooming()
+    {
+        const zoomingPerPixle = this.highestZoom / eval(this.distanceForMaxedZoom);
+
+        const zoomDistance = mouse.distance < eval(this.distanceForMaxedZoom) ? zoomingPerPixle * mouse.distance : zoomingPerPixle * eval(this.distanceForMaxedZoom);
+
+        if(this.zoomingAwayTowardMouseAngleCheck)
+        {
+            return {x: Math.cos(mouse.angle + Math.PI) * zoomDistance, y: Math.sin(mouse.angle + Math.PI) * zoomDistance};
+        }
+        else
+        {
+            return {x: 0, y: 0};
+        }
     }
 };
 
@@ -505,8 +535,10 @@ const background =
 
     draw(imageSource)
     {
-        let offsetX = position.x % this.size;
-        let offsetY = (switchSign(position.y)) % this.size; //since the browser have - as up and + as down
+        const zoomingShift = position.getCoordinateChangeFromZooming();
+
+        const offsetX = (position.x - zoomingShift.x) % this.size;
+        const offsetY = (switchSign(position.y) - zoomingShift.y) % this.size; //since the browser have - as up and + as down
                                                             //the number stored in position.y will need
                                                             //switchSign() when used
 
@@ -602,7 +634,7 @@ const bullet =
     
     speed: 10, //the moving speed of the bullet
     reload: 500, //the delay between shoot, or reload
-    despawningTime: 1000, //the time limit that when this bullet reached, it will get bigger,
+    despawningTime: 10000000, //the time limit that when this bullet reached, it will get bigger,
                             //fading away, and despawning the bullet
 
 
@@ -634,10 +666,11 @@ const bullet =
     {
         const drawEachBullet = (x, y, opacity, sizeMultiplier) => //function for drawing each bullet
         {
+            const zoomingShift = position.getCoordinateChangeFromZooming();
             const positionFromMiddleOfScreen = position.convertToScreenXY(x, y); //get the bullet position
                                                                                  //on screen
             //check if the bullet is even in the player FOV and if true, draw it
-            if(position.insideCameraFOVCheck(x, y, this.size * sizeMultiplier , this.size * sizeMultiplier))
+            if(position.insideCameraFOVCheck(positionFromMiddleOfScreen.x + zoomingShift.x, positionFromMiddleOfScreen.y + zoomingShift.y, this.size * sizeMultiplier , this.size * sizeMultiplier))
             {
                 drawing.save();
 
@@ -646,7 +679,7 @@ const bullet =
                 drawing.fillStyle = `rgba(${this.color}, ${opacity})`;
 
                 drawing.beginPath();
-                drawing.arc(positionFromMiddleOfScreen.x, positionFromMiddleOfScreen.y, (this.size * sizeMultiplier) / 2, 0, Math.PI * 2);
+                drawing.arc(positionFromMiddleOfScreen.x + zoomingShift.x, positionFromMiddleOfScreen.y + zoomingShift.y, (this.size * sizeMultiplier) / 2, 0, Math.PI * 2);
                 drawing.fill();
 
                 //border part
@@ -748,9 +781,11 @@ const gun =
 
     draw()
     {
+        const zoomingShift = position.getCoordinateChangeFromZooming();
+
         drawing.save();
 
-        drawing.translate(window.innerWidth / 2, window.innerHeight / 2); //move to the center of the screen
+        drawing.translate(window.innerWidth / 2 + zoomingShift.x, window.innerHeight / 2 + zoomingShift.y); //move to the center of the screen
 
         drawing.rotate(mouse.angle); //rotated toward the mouse
 
@@ -784,12 +819,14 @@ const body =
 
     draw()
     {
+        const zoomingShift = position.getCoordinateChangeFromZooming();
+
         drawing.save();
 
         //fill
         drawing.fillStyle = `rgb(${this.color})`;
         drawing.beginPath();
-        drawing.arc(window.innerWidth / 2, window.innerHeight / 2, this.size / 2, 0, Math.PI * 2);
+        drawing.arc(window.innerWidth / 2 + zoomingShift.x, window.innerHeight / 2 + zoomingShift.y, this.size / 2, 0, Math.PI * 2);
         drawing.fill();
 
         //border
@@ -875,8 +912,8 @@ const guiLayer =
     gun, //layer 2
     body, //layer 3
     GameText_fpsAndDelayEachFrame, //layer 4
-    GameText_showPosition,
-    crosshair //layer 5
+    GameText_showPosition, //layer 5
+    crosshair //layer 6
 
     //top => crosshair
 ];
@@ -892,6 +929,8 @@ document.addEventListener('mousemove', (event) =>
 
     //get the angle that the cursor had rotated, with the center of the screen being the origin
     mouse.angle = Math.atan2(mouse.y - (window.innerHeight / 2), mouse.x - (window.innerWidth / 2));
+
+    mouse.distance = getDistanceWithCoordinate(window.innerWidth / 2, window.innerHeight / 2, mouse.x, mouse.y);
 });
 
 
@@ -1003,14 +1042,29 @@ document.addEventListener("keyup", (event) =>
 });
 
 
-document.addEventListener("mousedown", () => 
+document.addEventListener("mousedown", (event) => 
 {
-    mouse.holdDown = true;
+    if(event.button === 0)
+    {
+        mouse.leftHoldDown = true;
+        position.zoomAdjustCheck = true;
+    }
+    else if(event.button === 2)
+    {
+        mouse.rightHoldDown = true;
+    }
 });
 
-document.addEventListener("mouseup", () => 
+document.addEventListener("mouseup", (event) => 
 {
-    mouse.holdDown = false;
+    if(event.button === 0)
+    {
+        mouse.leftHoldDown = false;
+    }
+    else if(event.button === 2)
+    {
+        mouse.rightHoldDown = false;
+    }
 });
 
 window.addEventListener("resize", () => 
@@ -1019,6 +1073,11 @@ window.addEventListener("resize", () =>
     canvas.height = window.innerHeight;
 
     adjustGameTextPositionWhenScreenResize();
+});
+
+document.addEventListener("contextmenu", (event) => 
+{
+    event.preventDefault();
 });
 
 
@@ -1033,7 +1092,7 @@ function draw()
 
 
     //code related to keeping track of bullet reload and creating new bullet when clicking
-    if(mouse.holdDown && bullet.reloadCheck) //shooting bullet when mouse is down
+    if(mouse.leftHoldDown && bullet.reloadCheck) //shooting bullet when mouse is down
     {
         //create new bullet
         bullet.list[bullet.list.length] = 
@@ -1057,6 +1116,16 @@ function draw()
     if(Date.now() - bullet.reloadTimer >= bullet.reload)
     {
         bullet.reloadCheck = true;
+    }
+
+
+    if(mouse.rightHoldDown)
+    {
+        position.zoomingAwayTowardMouseAngleCheck = true;
+    }
+    else
+    {
+        position.zoomingAwayTowardMouseAngleCheck = false;
     }
 
 
@@ -1213,6 +1282,11 @@ function adjustGameTextPositionWhenScreenResize()
     }
 }
 
+function giveShorterSideBetweenWidthAndHeight()
+{
+    return window.innerHeight <= window.innerWidth ? window.innerHeight : window.innerWidth;
+}
+
 
 //function for calculating math
 
@@ -1264,6 +1338,8 @@ if(position.randomizedSpawn)
     position.xPositionAfterRecoil = position.x;
     position.yPositionAfterRecoil = position.y;
 }
+
+position.highestZoom = eval(position.highestZoom);
 
 const imageSourceList = []; //store all the source here in string form. need to be empty.
                             //will be filled later in the next for loop
