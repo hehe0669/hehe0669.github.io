@@ -241,7 +241,7 @@ const position =
     xPositionAfterRecoil: 0,
     yPositionAfterRecoil: 0,
 
-    recoilDistanceThreadHold: 0.01, //if the distance between current pos and pos after recoil is lower
+    recoilDistanceThreadHold: 1, //if the distance between current pos and pos after recoil is lower
                                     //than the threadhold, it will just move the distance between those point
     recoilDecayingPercentage: 0.10, //percentage of the recoil that actually got affected each draw
 
@@ -742,7 +742,7 @@ const gun =
     borderColor: "105, 105, 108",
     borderThickness: 2.5,
 
-    recoil: 50,
+    recoil: 100,
     recoilCheck: false,
 
 
