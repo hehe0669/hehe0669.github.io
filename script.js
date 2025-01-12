@@ -10,6 +10,7 @@ const drawing = canvas.getContext('2d');
 
 //classes
 
+//class for any text
 class GameText //any object created by this class have "GameText_" at the start
 {
     //static property and static method
@@ -175,8 +176,8 @@ const fpsAndDrawDelay =
 };
 
 //object used to store the world position of player, method to convert from world position to screen position,
-//method to check if a given obj is in the player FOV, and method to give out change to postion change due to
-//recoil
+//method to check if a given obj is in the player FOV, method to give out change to postion change due to
+//recoil, method that give out drawing position changes due to zooming
 const position = 
 {
     /*
@@ -261,7 +262,7 @@ const position =
     //check if an object is inside the player screen, return true if yes
     insideCameraFOVCheck(xPositionOnScreen, yPositionOnScreen, sizeX, sizeY)
     {
-        const zoomingShift = this.getCoordinateChangeFromZooming();
+        const zoomingShift = this.getDrawPositionShiftedFromZooming();
 
         //the lowest and highest posible x and y value that an object have to be in
         //in order to appear in player screen
@@ -449,17 +450,23 @@ const position =
         */
     },
 
+    //return the x and y change from recoil
     getCoordinateChangeWhenRecoil()
     {
+        //get the distance that needed to move due to the recoil
         const movingDistance = getDistanceWithCoordinate(position.x, position.y, position.xPositionAfterRecoil, position.yPositionAfterRecoil);
+        //get the angle needed to move due to the recoil
         const movingAngle = getAngleToAimUsingTargetAndAimerCoordinate(position.x, position.y, position.xPositionAfterRecoil, position.yPositionAfterRecoil);
 
-        const movingAmount = movingDistance > this.recoilDecayingPercentage ? movingDistance * this.recoilDecayingPercentage : movingDistance;
+        //get the moving distance that the player actually moved to make the recoil appearing smoother
+        //
+        const movingAmount = movingDistance > this.recoilDistanceThreadHold ? movingDistance * this.recoilDecayingPercentage : movingDistance;
 
         return {x: Math.cos(movingAngle) * movingAmount, y: Math.sin(movingAngle) * movingAmount};
     },
 
-    getCoordinateChangeFromZooming()
+    //give out shifts in x and y postion oh graphical object when draw due to zooming
+    getDrawPositionShiftedFromZooming()
     {
         const zoomingPerPixle = this.highestZoom / eval(this.distanceForMaxedZoom);
 
@@ -535,7 +542,7 @@ const background =
 
     draw(imageSource)
     {
-        const zoomingShift = position.getCoordinateChangeFromZooming();
+        const zoomingShift = position.getDrawPositionShiftedFromZooming();
 
         const offsetX = (position.x - zoomingShift.x) % this.size;
         const offsetY = (switchSign(position.y) - zoomingShift.y) % this.size; //since the browser have - as up and + as down
@@ -666,7 +673,7 @@ const bullet =
     {
         const drawEachBullet = (x, y, opacity, sizeMultiplier) => //function for drawing each bullet
         {
-            const zoomingShift = position.getCoordinateChangeFromZooming();
+            const zoomingShift = position.getDrawPositionShiftedFromZooming();
             const positionFromMiddleOfScreen = position.convertToScreenXY(x, y); //get the bullet position
                                                                                  //on screen
             //check if the bullet is even in the player FOV and if true, draw it
@@ -781,7 +788,7 @@ const gun =
 
     draw()
     {
-        const zoomingShift = position.getCoordinateChangeFromZooming();
+        const zoomingShift = position.getDrawPositionShiftedFromZooming();
 
         drawing.save();
 
@@ -819,7 +826,7 @@ const body =
 
     draw()
     {
-        const zoomingShift = position.getCoordinateChangeFromZooming();
+        const zoomingShift = position.getDrawPositionShiftedFromZooming();
 
         drawing.save();
 
