@@ -936,7 +936,7 @@ document.addEventListener('mousemove', (event) =>
 
 document.addEventListener("keydown", (event) => 
 {
-    const input = event.key;
+    const input = event.key.toLowerCase();
 
     if(key.list.includes(input))
     {
@@ -1003,41 +1003,49 @@ document.addEventListener("keydown", (event) =>
 
 document.addEventListener("keyup", (event) => 
 {
-    if((event.key === "w" || event.key === "ArrowUp") || (event.key === "s" || event.key === "ArrowDown"))
+    const input = event.key.toLowerCase();
+    if(key.list.includes(input))
     {
-        if(event.key === "w" || event.key === "ArrowUp")
+        if(key.upKeys.includes(input))
         {
             position.up = false;
+
             position.upIsNewDirection = false;
+
+            position.oppositeY = false;
         }
-        else
+
+        if(key.downKeys.includes(input))
         {
             position.down = false;
+
             position.downIsNewDirection = false;
+
+            position.oppositeY = false;
         }
 
-        position.oppositeY = false;
-    }
-
-    if((event.key === "a" || event.key === "ArrowLeft") || (event.key === "d" || event.key === "ArrowRight"))
-    {
-        if(event.key === "a" || event.key === "ArrowLeft")
-        {
-            position.left = false;
-            position.leftIsNewDirection = false;
-        }
-        else
+        if(key.rightKeys.includes(input))
         {
             position.right = false;
+
             position.rightIsNewDirection = false;
+
+            position.oppositeX = false;
         }
 
-        position.oppositeX = false;
-    }
+        if(key.leftKeys.includes(input))
+        {
+            position.left = false;
 
-    if(event.key === ";")
-    {
-        fpsAndDrawDelay.semicolonDownedCheck = false;
+            position.leftIsNewDirection = false;
+
+            position.oppositeX = false;
+        }
+
+        if(input === ";")
+        {
+            fpsAndDrawDelay.semicolonDownedCheck = false;
+        }
     }
 });
 
