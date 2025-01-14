@@ -254,8 +254,21 @@ const position =
     //of the screen
 
     zoomingAwayTowardMouseAngleCheck: false,
-    lowestZoom: 0,
-    highestZoom: "giveShorterSideBetweenWidthAndHeight() / 2 - (body.size * 1.5)", //fomula to get highest zoom
+    lowestZoom: 10, //lowest amount that could be applied, no matter how far is mouse.distance
+
+    //fomula used to calculate the higest posible zoom, reached when the player move the cursor at or over
+    //distanceForMaxedZoom.
+    //highest zoom is a half of the shorter screen minus 1 and a half of the body size (the a half is needed
+    //to move the highest zoom from having half of the body on higest case to having full body on screen)
+    //the minus lowestZoom is to ensure that highest zoom is actually at highest zoom and not increased by
+    //the adding of the lowest zoom
+    //eval at load => see preload code
+    highestZoom: "(giveShorterSideBetweenWidthAndHeight() / 2 - (body.size * 1.5)) - position.lowestZoom",
+
+    //the distance from the center of screen to what ever this value is, used to keep track of mouse.distance
+    //to apply zoom, the further the mouse.distance is. if higher or equal to this, the highest zoom
+    //is applied
+    //eval at load => see preload code
     distanceForMaxedZoom: "0.5 * (giveShorterSideBetweenWidthAndHeight() / 2)",
 
 
@@ -459,25 +472,40 @@ const position =
         const movingAngle = getAngleToAimUsingTargetAndAimerCoordinate(position.x, position.y, position.xPositionAfterRecoil, position.yPositionAfterRecoil);
 
         //get the moving distance that the player actually moved to make the recoil appearing smoother
-        //
+        //if the distance needed to move is higher than the cut off threadhold, a percentage is applied
+        //to the moving distance to make it smaller and make it appeared smoother and not teleporty
+        //if the distance is lower than the threadhold then just moved the needed distance without
+        //the percentage
         const movingAmount = movingDistance > this.recoilDistanceThreadHold ? movingDistance * this.recoilDecayingPercentage : movingDistance;
 
+        //return an obj that hold the position change
         return {x: Math.cos(movingAngle) * movingAmount, y: Math.sin(movingAngle) * movingAmount};
     },
 
     //give out shifts in x and y postion oh graphical object when draw due to zooming
     getDrawPositionShiftedFromZooming()
     {
-        const zoomingPerPixle = this.highestZoom / eval(this.distanceForMaxedZoom);
+        //get how much zoom is provided per pixle of distance in mouse.distance
+        const zoomingPerPixle = this.highestZoom / this.distanceForMaxedZoom;
 
-        const zoomDistance = mouse.distance < eval(this.distanceForMaxedZoom) ? zoomingPerPixle * mouse.distance : zoomingPerPixle * eval(this.distanceForMaxedZoom);
+        //check if mouse distance is smaller than the longest range that u can go to have highestZoom,
+        //distanceForMaxedZoom, and if it is, time mouse distance with the zooming per pixel ratio to get
+        //the zoomed distance, else if the mouse distance is way higher than the needed range, just time
+        //zoomingPerPixle with distanceForMaxedZoom to not allow the player to zoom higher
+        let zoomDistance = mouse.distance < this.distanceForMaxedZoom ? zoomingPerPixle * mouse.distance : zoomingPerPixle * this.distanceForMaxedZoom;
 
-        if(this.zoomingAwayTowardMouseAngleCheck)
+        zoomDistance += this.lowestZoom; //add lowestZoom to ensure that even if mouse.distance is close to
+                                         //0, the zoom would be at least equal to lowest zoom
+
+        if(this.zoomingAwayTowardMouseAngleCheck) //check if zooming is enable to actually apply the
+                                                  //transition from the zooming
         {
+            //return the transition in x and y
             return {x: Math.cos(mouse.angle + Math.PI) * zoomDistance, y: Math.sin(mouse.angle + Math.PI) * zoomDistance};
         }
         else
         {
+            //just return 0
             return {x: 0, y: 0};
         }
     }
@@ -641,7 +669,7 @@ const bullet =
     
     speed: 10, //the moving speed of the bullet
     reload: 500, //the delay between shoot, or reload
-    despawningTime: 10000000, //the time limit that when this bullet reached, it will get bigger,
+    despawningTime: 750, //the time limit that when this bullet reached, it will get bigger,
                             //fading away, and despawning the bullet
 
 
@@ -1342,7 +1370,7 @@ function giveRandomVal(maxValue, minValue, decimalOrInteger) //give random numbe
 }
 
 
-// loaded function
+//preload code
 
 //set up initial position
 if(position.randomizedSpawn)
@@ -1355,6 +1383,7 @@ if(position.randomizedSpawn)
 }
 
 position.highestZoom = eval(position.highestZoom);
+position.distanceForMaxedZoom = eval(position.distanceForMaxedZoom);
 
 const imageSourceList = []; //store all the source here in string form. need to be empty.
                             //will be filled later in the next for loop
