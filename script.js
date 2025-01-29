@@ -91,7 +91,8 @@ class GameText //any object created by this class have "GameText_" at the start
 
     draw()
     {
-        if(this.toggleCondition)
+        if(this.toggleCondition) //if the toggleCondition method is true, which used to check if the text is
+                                 //being draw or not, the text is being drawn
         {
             //set up a string that will later pass to drawing.font
             /*
@@ -111,13 +112,23 @@ class GameText //any object created by this class have "GameText_" at the start
             drawing.font = textCostumization;
             drawing.textAlign = this.textAlign;
 
+            //draw border if borderToggle is true
             if(this.borderToggle)
             {
-                drawing.lineWidth = this.borderThickness
+                drawing.lineWidth = this.borderThickness;
                 drawing.strokeStyle = this.borderColor;
+
+
+                //next 2 line are importance to prevent weird sharp points in "W", "V", "M"
+
+                drawing.lineJoin = "round";
+                drawing.miterLimit = 2;
+
 
                 drawing.strokeText(this.text, 0, 0);
             }
+
+            // draw fill
 
             drawing.fillStyle = this.color;
 
@@ -242,8 +253,10 @@ const position =
 
     //x and y pos if the recoil came to effect immediately
 
-    xPositionAfterRecoil: 0,
-    yPositionAfterRecoil: 0,
+    xPositionAfterRecoil: 0, //store the x position of player if all the recoil is applied at once
+                             //and not spread out
+    yPositionAfterRecoil: 0, //store the x position of player if all the recoil is applied at once
+    //and not spread out
 
     recoilDistanceThreadHold: 1, //if the distance between current pos and pos after recoil is lower
                                     //than the threadhold, it will just move the distance between those point
@@ -253,7 +266,8 @@ const position =
     //properties related to the zooming toward the mouse the further the cursor are from the middle
     //of the screen
 
-    zoomingAwayTowardMouseAngleCheck: false,
+    zoomingAwayTowardMouseAngleCheck: false, //boolean for checking is zooming toward mouse is enable,
+                                             //true for yes
     lowestZoom: 10, //lowest amount that could be applied, no matter how far is mouse.distance
 
     //fomula used to calculate the higest posible zoom, reached when the player move the cursor at or over
@@ -271,14 +285,29 @@ const position =
     //eval at load => see preload code
     distanceForMaxedZoom: "0.5 * (giveShorterSideBetweenWidthAndHeight() / 2)",
 
+    shiftedX: 0, //current shifted value in x
+    shiftedY: 0, //current shifted value in y
+    wantedShiftedX: 0, //total shifted x value that needed to be made
+    wantedShiftedY: 0, //total shifted y value that needed to be made
+    zoomDistanceThreadHold: 1, //if the distance between current shift and wanted shift is lower
+                               //than the threadhold, it will just apply the distance between those point
+    zoomDecayingPercentage: 0.35, //percentage of the needed zoom that actually got affected each draw()
+
 
     //check if an object is inside the player screen, return true if yes
     insideCameraFOVCheck(xPositionOnScreen, yPositionOnScreen, sizeX, sizeY)
     {
-        const zoomingShift = this.getDrawPositionShiftedFromZooming();
+        /*
+            the obj xPositionOnScreen and yPositionOnScreen must be converted from game position to
+            screen position first via position.convertToScreenXY() then add the result to position.shiftedX
+            or position.shiftedY depending on the axis, here is how the code should look like:
 
-        //the lowest and highest posible x and y value that an object have to be in
-        //in order to appear in player screen
+            if(position.insideCameraFOVCheck(XPositionOnScreen + position.shiftedX, YPositionOnScreen
+            + position.shiftedY, obj.sixeX, obj.sizeY))
+            {
+                code run if graphical object is in player screen...
+            }
+        */
 
         /*
 
@@ -310,6 +339,9 @@ const position =
         |__________________________|
         */
 
+        //the lowest and highest posible x and y value that an object have to be in,
+        //in order to appear in player screen
+
         const leftMostXValueFromCenter = 0 + switchSign(sizeX / 2);
         const rightMostXValueFromCenter = window.innerWidth + (sizeX / 2);
         const upMostYValueFromCenter = 0 + switchSign(sizeY / 2);
@@ -330,18 +362,6 @@ const position =
     //converting world position to position on screen
     convertToScreenXY(worldX, worldY)
     {
-        let screenX = worldX - this.x;
-        let screenY = worldY - this.y;
-
-        screenY = switchSign(screenY); //flip the sign since y in browser is lower as u move up
-                                       //and higher going down
-
-        //move to the middle of the screen since top left is 0, 0 and not at the center
-        screenX += window.innerWidth / 2;
-        screenY += window.innerHeight / 2;
-
-        return {x: screenX, y: screenY};
-
         /*
         how is this work?
         dunno, but let test all the posible cases:
@@ -461,15 +481,26 @@ const position =
 
                 10 - - 10 = 20
         */
+        let screenX = worldX - this.x;
+        let screenY = worldY - this.y;
+
+        screenY = switchSign(screenY); //flip the sign since y in browser is lower as u move up
+                                       //and higher going down
+
+        //move to the middle of the screen since top left is 0, 0 and not at the center
+        screenX += window.innerWidth / 2;
+        screenY += window.innerHeight / 2;
+
+        return {x: screenX, y: screenY};
     },
 
     //return the x and y change from recoil
     getCoordinateChangeWhenRecoil()
     {
         //get the distance that needed to move due to the recoil
-        const movingDistance = getDistanceWithCoordinate(position.x, position.y, position.xPositionAfterRecoil, position.yPositionAfterRecoil);
+        const movingDistance = getDistanceWithCoordinate(this.x, this.y, this.xPositionAfterRecoil, this.yPositionAfterRecoil);
         //get the angle needed to move due to the recoil
-        const movingAngle = getAngleToAimUsingTargetAndAimerCoordinate(position.x, position.y, position.xPositionAfterRecoil, position.yPositionAfterRecoil);
+        const movingAngle = getAngleToAimUsingTargetAndAimerCoordinate(this.x, this.y, this.xPositionAfterRecoil, this.yPositionAfterRecoil);
 
         //get the moving distance that the player actually moved to make the recoil appearing smoother
         //if the distance needed to move is higher than the cut off threadhold, a percentage is applied
@@ -482,32 +513,41 @@ const position =
         return {x: Math.cos(movingAngle) * movingAmount, y: Math.sin(movingAngle) * movingAmount};
     },
 
-    //give out shifts in x and y postion oh graphical object when draw due to zooming
-    getDrawPositionShiftedFromZooming()
+    //shift all the graphical obj position after each frame, due to zooming, to smooth out the transition 
+    changeShiftedPositionFromZooming()
     {
-        //get how much zoom is provided per pixle of distance in mouse.distance
-        const zoomingPerPixle = this.highestZoom / this.distanceForMaxedZoom;
-
-        //check if mouse distance is smaller than the longest range that u can go to have highestZoom,
-        //distanceForMaxedZoom, and if it is, time mouse distance with the zooming per pixel ratio to get
-        //the zoomed distance, else if the mouse distance is way higher than the needed range, just time
-        //zoomingPerPixle with distanceForMaxedZoom to not allow the player to zoom higher
-        let zoomDistance = mouse.distance < this.distanceForMaxedZoom ? zoomingPerPixle * mouse.distance : zoomingPerPixle * this.distanceForMaxedZoom;
-
-        zoomDistance += this.lowestZoom; //add lowestZoom to ensure that even if mouse.distance is close to
-                                         //0, the zoom would be at least equal to lowest zoom
-
         if(this.zoomingAwayTowardMouseAngleCheck) //check if zooming is enable to actually apply the
                                                   //transition from the zooming
         {
-            //return the transition in x and y
-            return {x: Math.cos(mouse.angle + Math.PI) * zoomDistance, y: Math.sin(mouse.angle + Math.PI) * zoomDistance};
+            //get how much zoom is provided per pixle of distance in mouse.distance
+            const zoomingPerPixle = this.highestZoom / this.distanceForMaxedZoom;
+
+            //check if mouse distance is smaller than the longest range that u can go to have highestZoom,
+            //distanceForMaxedZoom, and if it is, time mouse distance with the zooming per pixel ratio to get
+            //the zoomed distance, else if the mouse distance is way higher than the needed range, just time
+            //zoomingPerPixle with distanceForMaxedZoom to not allow the player to zoom higher
+            let zoomDistance = mouse.distance < this.distanceForMaxedZoom ? zoomingPerPixle * mouse.distance : zoomingPerPixle * this.distanceForMaxedZoom;
+
+            zoomDistance += this.lowestZoom; //add lowestZoom to ensure that even if mouse.distance is close
+                                             //to 0, the zoom would be at least equal to lowest zoom
+
+            this.wantedShiftedX = Math.cos(mouse.angle + Math.PI) * zoomDistance;
+            this.wantedShiftedY = Math.sin(mouse.angle + Math.PI) * zoomDistance;
         }
         else
         {
-            //just return 0
-            return {x: 0, y: 0};
+            this.wantedShiftedX = 0;
+            this.wantedShiftedY = 0;
         }
+
+        
+        const shiftingDistance = getDistanceWithCoordinate(this.shiftedX, this.shiftedY, this.wantedShiftedX, this.wantedShiftedY);
+        const shiftingAngle = getAngleToAimUsingTargetAndAimerCoordinate(this.shiftedX, this.shiftedY, this.wantedShiftedX, this.wantedShiftedY);
+
+        const shiftingAmount = shiftingDistance > this.zoomDistanceThreadHold ? shiftingDistance * this.zoomDecayingPercentage : shiftingDistance;
+
+        this.shiftedX += Math.cos(shiftingAngle) * shiftingAmount;
+        this.shiftedY += Math.sin(shiftingAngle) * shiftingAmount;
     }
 };
 
@@ -570,12 +610,11 @@ const background =
 
     draw(imageSource)
     {
-        const zoomingShift = position.getDrawPositionShiftedFromZooming();
+        const offsetX = (position.x - position.shiftedX) % this.size;
+        const offsetY = (switchSign(position.y) - position.shiftedY) % this.size;
+        //since the browser have - as up and + as down,
+        //the number stored in position.y will need switchSign() when used
 
-        const offsetX = (position.x - zoomingShift.x) % this.size;
-        const offsetY = (switchSign(position.y) - zoomingShift.y) % this.size; //since the browser have - as up and + as down
-                                                            //the number stored in position.y will need
-                                                            //switchSign() when used
 
         const drawTitles = (x, y) => 
         {
@@ -662,9 +701,9 @@ const background =
 const bullet = 
 {
     size: 20, //make sure to have this the same size as gun.sizeY
-    color: "60, 164, 203",
+    color: "20, 160, 220",
     borderColor: "67, 104, 117",
-    borderThickness: 2.5,
+    borderThickness: 3,
     
     
     speed: 10, //the moving speed of the bullet
@@ -701,11 +740,10 @@ const bullet =
     {
         const drawEachBullet = (x, y, opacity, sizeMultiplier) => //function for drawing each bullet
         {
-            const zoomingShift = position.getDrawPositionShiftedFromZooming();
             const positionFromMiddleOfScreen = position.convertToScreenXY(x, y); //get the bullet position
                                                                                  //on screen
             //check if the bullet is even in the player FOV and if true, draw it
-            if(position.insideCameraFOVCheck(positionFromMiddleOfScreen.x + zoomingShift.x, positionFromMiddleOfScreen.y + zoomingShift.y, this.size * sizeMultiplier , this.size * sizeMultiplier))
+            if(position.insideCameraFOVCheck(positionFromMiddleOfScreen.x + position.shiftedX, positionFromMiddleOfScreen.y + position.shiftedY, this.size * sizeMultiplier , this.size * sizeMultiplier))
             {
                 drawing.save();
 
@@ -714,7 +752,7 @@ const bullet =
                 drawing.fillStyle = `rgba(${this.color}, ${opacity})`;
 
                 drawing.beginPath();
-                drawing.arc(positionFromMiddleOfScreen.x + zoomingShift.x, positionFromMiddleOfScreen.y + zoomingShift.y, (this.size * sizeMultiplier) / 2, 0, Math.PI * 2);
+                drawing.arc(positionFromMiddleOfScreen.x + position.shiftedX, positionFromMiddleOfScreen.y + position.shiftedY, (this.size * sizeMultiplier) / 2, 0, Math.PI * 2);
                 drawing.fill();
 
                 //border part
@@ -806,9 +844,9 @@ const gun =
 
     sizeX: 60,
     sizeY: 20, //make sure to have this the same size as bullet.size
-    color: "167, 167, 175", //the fill color of the gun
+    color: "164, 164, 164", //the fill color of the gun
     borderColor: "105, 105, 108",
-    borderThickness: 2.5,
+    borderThickness: 3,
 
     recoil: 100,
     recoilCheck: false,
@@ -816,11 +854,9 @@ const gun =
 
     draw()
     {
-        const zoomingShift = position.getDrawPositionShiftedFromZooming();
-
         drawing.save();
 
-        drawing.translate(window.innerWidth / 2 + zoomingShift.x, window.innerHeight / 2 + zoomingShift.y); //move to the center of the screen
+        drawing.translate(window.innerWidth / 2 + position.shiftedX, window.innerHeight / 2 + position.shiftedY); //move to the center of the screen
 
         drawing.rotate(mouse.angle); //rotated toward the mouse
 
@@ -847,21 +883,19 @@ const gun =
 const body = 
 {
     size: 60,
-    color: "60, 164, 203",
+    color: "20, 160, 220",
     borderColor: "67, 104, 117",
-    borderThickness: 2.5,
+    borderThickness: 3,
 
 
     draw()
     {
-        const zoomingShift = position.getDrawPositionShiftedFromZooming();
-
         drawing.save();
 
         //fill
         drawing.fillStyle = `rgb(${this.color})`;
         drawing.beginPath();
-        drawing.arc(window.innerWidth / 2 + zoomingShift.x, window.innerHeight / 2 + zoomingShift.y, this.size / 2, 0, Math.PI * 2);
+        drawing.arc(window.innerWidth / 2 + position.shiftedX, window.innerHeight / 2 + position.shiftedY, this.size / 2, 0, Math.PI * 2);
         drawing.fill();
 
         //border
@@ -956,6 +990,7 @@ const guiLayer =
 
 // event listeners
 
+//event check for mouse moved
 document.addEventListener('mousemove', (event) => 
 {
     //get pos of mouse
@@ -965,65 +1000,76 @@ document.addEventListener('mousemove', (event) =>
     //get the angle that the cursor had rotated, with the center of the screen being the origin
     mouse.angle = Math.atan2(mouse.y - (window.innerHeight / 2), mouse.x - (window.innerWidth / 2));
 
+    //get the distance between the cursor and the middle of the screen
     mouse.distance = getDistanceWithCoordinate(window.innerWidth / 2, window.innerHeight / 2, mouse.x, mouse.y);
 });
 
 
+//event check for key
 document.addEventListener("keydown", (event) => 
 {
-    const input = event.key.toLowerCase();
+    const input = event.key.toLowerCase(); //turn UPPERCASE char from shift or caps lock to lowercase
 
+    //check if the included key is included in keys.list
     if(key.list.includes(input))
     {
-        if(key.upKeys.includes(input))
+        if(key.upKeys.includes(input)) //check if the inputed key is for moving up
         {
-            position.up = true;
+            position.up = true; //moving up track, use later in changePosition()
 
-            if(position.down === true)
+            //check if the is a moving direction conflict if the player wanted to move up while moving down
+            if(position.down === true) //if already moving down
             {
-                position.upIsNewDirection = true;
-                position.downIsNewDirection = false;
+                position.upIsNewDirection = true; //keep track of up being the new direction
+                position.downIsNewDirection = false; //swicth downIsNewDirection to false in case
+                                                     //if it was true
 
-                position.oppositeY = true;
+                position.oppositeY = true; //used to keep track of opposite movement in the y axis
             }
         }
         
-        if(key.downKeys.includes(input))
+        if(key.downKeys.includes(input)) //check if the inputed key is for moving down
         {
-            position.down = true;
+            position.down = true; //moving down track, use later in changePosition()
 
-            if(position.up === true)
+            //check if the is a moving direction conflict if the player wanted to move down while moving up
+            if(position.up === true) //if alr moving up
             {
-                position.downIsNewDirection = true;
-                position.upIsNewDirection = false;
+                position.downIsNewDirection = true; //keep track of down being the new direction
+                position.upIsNewDirection = false; //swicth upIsNewDirection to false in case
+                                                   //if it was true
 
-                position.oppositeY = true;
+                position.oppositeY = true; //used to keep track of opposite movement in the y axis
             }
         }
 
-        if(key.leftKeys.includes(input))
+        if(key.leftKeys.includes(input)) //check if the inputed key is for moving left
         {
-            position.left = true;
+            position.left = true; //moving left track, use later in changePosition()
 
-            if(position.right === true)
+            //check if the is a moving direction conflict if the player wanted to move left while moving right
+            if(position.right === true) //if alr moving up
             {
-                position.leftIsNewDirection = true;
-                position.rightIsNewDirection = false;
+                position.leftIsNewDirection = true; //keep track of left being the new direction
+                position.rightIsNewDirection = false; //swicth rightIsNewDirection to false in case
+                                                      //if it was true
 
-                position.oppositeX = true;
+                position.oppositeX = true; //used to keep track of opposite movement in the x axis
             }
         }
         
-        if(key.rightKeys.includes(input))
+        if(key.rightKeys.includes(input)) //check if the inputed key is for moving right
         {
-            position.right = true;
+            position.right = true; //moving right track, use later in changePosition()
 
+            //check if the is a moving direction conflict if the player wanted to move right while moving left
             if(position.left === true)
             {
-                position.rightIsNewDirection = true;
-                position.leftIsNewDirection = false;
+                position.rightIsNewDirection = true; //keep track of right being the new direction
+                position.leftIsNewDirection = false; //swicth leftIsNewDirection to false in case
+                                                     //if it was true
 
-                position.oppositeX = true;
+                position.oppositeX = true; //used to keep track of opposite movement in the x axis
             }
         }
 
@@ -1174,6 +1220,8 @@ function draw()
 
     //code related to movement
     changePosition();
+
+    position.changeShiftedPositionFromZooming();
 
 
     GameText_showPosition.text = `x: ${position.x.toFixed(2)}, y: ${position.y.toFixed(2)}`;
