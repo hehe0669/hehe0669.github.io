@@ -987,6 +987,47 @@ const guiLayer =
     //top => crosshair
 ];
 
+//TEST
+const obj = 
+{
+    sizeX: 200,
+	sizeY: 200,
+
+    x: 500,
+    y: 0,
+
+    color: "20, 160, 220",
+    borderColor: "67, 104, 117",
+    borderThickness: 3,
+    
+    
+    draw() 
+    {
+        const positionFromMiddleOfScreen = position.convertToScreenXY(this.x, this.y);
+
+        if(position.insideCameraFOVCheck(positionFromMiddleOfScreen.x + position.shiftedX, positionFromMiddleOfScreen.y + position.shiftedY, this.sizeX, this.sizeY))
+        {
+            drawing.save();
+
+            drawing.translate(positionFromMiddleOfScreen.x + position.shiftedX - (this.sizeX / 2), positionFromMiddleOfScreen.y + position.shiftedY - (this.sizeY / 2));
+
+            //fill part
+
+            drawing.fillStyle = `rgba(${this.color})`;
+            drawing.fillRect(0, 0, this.sizeX, this.sizeY);
+
+            //border part
+            drawing.strokeStyle = `rgba(${this.borderColor})`;
+            drawing.lineWidth = this.borderThickness;
+            drawing.strokeRect(0, 0, this.sizeX, this.sizeY);
+
+            drawing.restore();
+        }
+    }
+};
+
+guiLayer.splice(2, 0, obj);
+//TEST
 
 // event listeners
 
@@ -1216,6 +1257,19 @@ function draw()
     {
         position.zoomingAwayTowardMouseAngleCheck = false;
     }
+    
+    //TEST
+    const insideDistance = collision(500, 0, "rectangle", 200, 200, position.x, position.y, "circle", body.size, body.size);
+    const anglePointingFromObj1ToObj2 = getAngleToAimUsingTargetAndAimerCoordinate(500, 0, position.x, position.y);
+
+    if(insideDistance < 0)
+    {
+        position.x += Math.cos(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
+        position.y += Math.sin(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
+        position.xPositionAfterRecoil += Math.cos(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
+        position.yPositionAfterRecoil += Math.sin(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
+    }
+    //TEST
 
 
     //code related to movement
@@ -1377,6 +1431,55 @@ function giveShorterSideBetweenWidthAndHeight()
 {
     return window.innerHeight <= window.innerWidth ? window.innerHeight : window.innerWidth;
 }
+
+//TEST
+function collision(obj1X, obj1Y, obj1HitBox, obj1SizeX, obj1SizeY, obj2X, obj2Y, obj2HitBox, obj2SizeX, obj2SizeY)
+{
+    const distance = getDistanceWithCoordinate(obj1X, obj1Y, obj2X, obj2Y);
+
+    if(obj1HitBox === "circle" && obj2HitBox === "circle")
+    {
+        return "circle and circle";
+    }
+    else if(obj1HitBox === "rectangle" && obj2HitBox === "rectangle")
+    {
+        return "rectangle and rectangle";
+    }
+    else if((obj1HitBox === "circle" || obj1HitBox === "rectangle") && (obj2HitBox === "circle" || obj2HitBox === "rectangle") && obj1HitBox !== obj2HitBox)
+    {
+        if(obj1HitBox === "rectangle")
+        {
+            const angle = getAngleToAimUsingTargetAndAimerCoordinate(obj1X, obj1Y, obj2X, obj2Y);
+
+            return (distance - giveDistanceFromCenterToEdge(angle, obj1SizeX, obj1SizeY) - (obj2SizeX / 2));
+        }
+        else
+        {
+            const angle = getAngleToAimUsingTargetAndAimerCoordinate(obj2X, obj2Y, obj1X, obj2Y);
+
+            return (distance - giveDistanceFromCenterToEdge(angle, obj2SizeX, obj2SizeY) - (obj1SizeX / 2));
+        }
+    }
+}
+
+function giveDistanceFromCenterToEdge(angle, width, height)
+{
+	let distanceFromCenterToEdge;
+
+	const abs_cos_angle= Math.abs(Math.cos(angle));
+	const abs_sin_angle= Math.abs(Math.sin(angle));
+	if (width / 2 / abs_cos_angle <= height / 2 / abs_sin_angle)
+	{
+		distanceFromCenterToEdge= Math.abs(width / 2 / abs_cos_angle);
+	}
+	else
+	{
+		distanceFromCenterToEdge= height / 2 / abs_sin_angle;
+	}
+
+	return distanceFromCenterToEdge;
+}
+//TEST
 
 
 //function for calculating math
