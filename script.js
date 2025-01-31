@@ -1259,16 +1259,7 @@ function draw()
     }
     
     //TEST
-    const insideDistance = collision(500, 0, "rectangle", 200, 200, position.x, position.y, "circle", body.size, body.size);
-    const anglePointingFromObj1ToObj2 = getAngleToAimUsingTargetAndAimerCoordinate(500, 0, position.x, position.y);
-
-    if(insideDistance < 0)
-    {
-        position.x += Math.cos(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
-        position.y += Math.sin(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
-        position.xPositionAfterRecoil += Math.cos(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
-        position.yPositionAfterRecoil += Math.sin(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
-    }
+    collision(500, 0, "rectangle", 200, 200, position.x, position.y, "circle", body.size, body.size);
     //TEST
 
 
@@ -1436,6 +1427,7 @@ function giveShorterSideBetweenWidthAndHeight()
 function collision(obj1X, obj1Y, obj1HitBox, obj1SizeX, obj1SizeY, obj2X, obj2Y, obj2HitBox, obj2SizeX, obj2SizeY)
 {
     const distance = getDistanceWithCoordinate(obj1X, obj1Y, obj2X, obj2Y);
+    const anglePointingFromObj1ToObj2 = getAngleToAimUsingTargetAndAimerCoordinate(obj1X, obj1Y, obj2X, obj2Y);
 
     if(obj1HitBox === "circle" && obj2HitBox === "circle")
     {
@@ -1451,7 +1443,16 @@ function collision(obj1X, obj1Y, obj1HitBox, obj1SizeX, obj1SizeY, obj2X, obj2Y,
         {
             const angle = getAngleToAimUsingTargetAndAimerCoordinate(obj1X, obj1Y, obj2X, obj2Y);
 
-            return (distance - giveDistanceFromCenterToEdge(angle, obj1SizeX, obj1SizeY) - (obj2SizeX / 2));
+            // return (distance - giveDistanceFromCenterToEdge(angle, obj1SizeX, obj1SizeY) - (obj2SizeX / 2));
+            const insideDistance = distance - giveDistanceFromCenterToEdge(angle, obj1SizeX, obj1SizeY) - (obj2SizeX / 2);
+
+            if(insideDistance < 0)
+            {
+                position.x += Math.cos(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
+                position.y += Math.sin(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
+                position.xPositionAfterRecoil += Math.cos(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
+                position.yPositionAfterRecoil += Math.sin(anglePointingFromObj1ToObj2) * switchSign(insideDistance);
+            }
         }
         else
         {
