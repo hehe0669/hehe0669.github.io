@@ -525,68 +525,73 @@
                 }
                 
                 
+                const getTimeLeftAndSmallerTimerTextContent = (smallerTimerTextContent, getTimeMiliSecVal) =>
+                {
+                    smallerTimerText.textContent = smallerTimerTextContent;
+                    
+                    if(getTimeMiliSecVal <= time2mili("59s"))
+                    {
+                        tempStringHolder = `${getTime(getTimeMiliSecVal, "s", "round")}s left`;
+                    }
+                    else if(getTimeMiliSecVal >= time2mili("1m") && getTimeMiliSecVal < time2mili("5m"))
+                    {
+                        tempStringHolder = `${getTime(getTimeMiliSecVal, "m", "floor")}m and ${getTime(getTimeMiliSecVal, "s", "round")}s left`;
+                    }
+                    else if(getTimeMiliSecVal >= time2mili("5m") && getTimeMiliSecVal < time2mili("1h"))
+                    {
+                        tempStringHolder = `${getTime(getTimeMiliSecVal, "m", "round")}m left`;
+                    }
+                    else if(getTimeMiliSecVal >= time2mili("1h") && getTimeMiliSecVal <= time2mili("3h"))
+                    {
+                        if(getTime(getTimeMiliSecVal, "m", "floor") === 0)
+                        {
+                            tempStringHolder = `${getTime(getTimeMiliSecVal, "h", "floor")}h left`;
+                        }
+                        else
+                        {
+                            tempStringHolder = `${getTime(getTimeMiliSecVal, "h", "floor")}h and ${getTime(getTimeMiliSecVal, "m", "round")}m left`;
+                        }
+                    }
+                    else if(getTimeMiliSecVal > time2mili("3h") && getTimeMiliSecVal <= time2mili("5h"))
+                    {
+                        if(getTime(getTimeMiliSecVal, "m", "floor") === 0)
+                        {
+                            tempStringHolder = `${getTime(getTimeMiliSecVal, "h", "floor")}h left`;
+                        }
+                        else if(getTime(getTimeMiliSecVal, "m", "floor") === 30)
+                        {
+                            tempStringHolder = `${getTime(getTimeMiliSecVal, "h", "floor")} and a half hr left`;
+                        }
+                        else if(getTime(getTimeMiliSecVal, "m", "floor") > 30)
+                        {
+                            tempStringHolder = `over ${getTime(getTimeMiliSecVal, "h", "floor")} and a half hr left`;
+                        }
+                        else if(getTime(getTimeMiliSecVal, "m", "floor") < 30)
+                        {
+                            tempStringHolder = `under ${getTime(getTimeMiliSecVal, "h", "floor")} and a half hr left`;
+                        }
+                    }
+                    else if(getTimeMiliSecVal > time2mili("5h") && getTimeMiliSecVal < time2mili("1d"))
+                    {
+                        if(getTime(getTimeMiliSecVal, "m", "floor") === 0)
+                        {
+                            tempStringHolder = `${getTime(getTimeMiliSecVal, "h", "floor")}h left`;
+                        }
+                        else
+                        {
+                            tempStringHolder = `about ${getTime(getTimeMiliSecVal, "h", "round")}h left`;
+                        }
+                    }
+                    else if(getTimeMiliSecVal >= time2mili("1d"))
+                    {
+                        tempStringHolder = `${getTime(getTimeMiliSecVal, "d", "floor")}d and ${getTime(getTimeMiliSecVal, "h", "round")}h left`;
+                    }
+                };
+
                 if(dataSave.timeTilType === "next")
                 {
-                    smallerTimerText.textContent = "till next class";
-                    
-                    if(this.milisecTilNext <= time2mili("59s"))
-                    {
-                        tempStringHolder = `${getTime(this.milisecTilNext, "s")}s left`;
-                    }
-                    else if(this.milisecTilNext >= time2mili("1m") && this.milisecTilNext < time2mili("5m"))
-                    {
-                        tempStringHolder = `${getTime(this.milisecTilNext, "m")}m and ${getTime(this.milisecTilNext, "s")}s left`;
-                    }
-                    else if(this.milisecTilNext >= time2mili("5m") && this.milisecTilNext < time2mili("1h"))
-                    {
-                        tempStringHolder = `${getTime(this.milisecTilNext, "m")}m left`;
-                    }
-                    else if(this.milisecTilNext >= time2mili("1h") && this.milisecTilNext <= time2mili("3h"))
-                    {
-                        if(getTime(this.milisecTilNext, "m") === 0)
-                        {
-                            tempStringHolder = `${getTime(this.milisecTilNext, "h")}h left`;
-                        }
-                        else
-                        {
-                            tempStringHolder = `${getTime(this.milisecTilNext, "h")}h and ${getTime(this.milisecTilNext, "m")}m left`;
-                        }
-                    }
-                    else if(this.milisecTilNext > time2mili("3h") && this.milisecTilNext <= time2mili("5h"))
-                    {
-                        if(getTime(this.milisecTilNext, "m") === 0)
-                        {
-                            tempStringHolder = `${getTime(this.milisecTilNext, "h")}h left`;
-                        }
-                        else if(getTime(this.milisecTilNext, "m") === 30)
-                        {
-                            tempStringHolder = `${getTime(this.milisecTilNext, "h")} and a half hr left`;
-                        }
-                        else if(getTime(this.milisecTilNext, "m") > 30)
-                        {
-                            tempStringHolder = `over ${getTime(this.milisecTilNext, "h")} and a half hr left`;
-                        }
-                        else if(getTime(this.milisecTilNext, "m") < 30)
-                        {
-                            tempStringHolder = `under ${getTime(this.milisecTilNext, "h")} and a half hr left`;
-                        }
-                    }
-                    else if(this.milisecTilNext > time2mili("5h") && this.milisecTilNext < time2mili("1d"))
-                    {
-                        if(getTime(this.milisecTilNext, "m") === 0)
-                        {
-                            tempStringHolder = `${getTime(this.milisecTilNext, "h")}h left`;
-                        }
-                        else
-                        {
-                            tempStringHolder = `about ${getTime(this.milisecTilNext, "h")}h left`;
-                        }
-                    }
-                    else if(this.milisecTilNext >= time2mili("1d"))
-                    {
-                        tempStringHolder = `${getTime(this.milisecTilNext, "d")}d and ${getTime(this.milisecTilNext, "h")}h left`;
-                    }
-                    
+                    getTimeLeftAndSmallerTimerTextContent("till next class", this.milisecTilNext);
+
                     if(timeLeftTilTimer.textContent !== tempStringHolder)
                     {
                         timeLeftTilTimer.textContent = tempStringHolder;
@@ -608,65 +613,7 @@
                     }
                     else
                     {
-                        smallerTimerText.textContent = "till end of current class";
-                        
-                        if(this.milisecTilEnd <= time2mili("59s"))
-                        {
-                            tempStringHolder = `${getTime(this.milisecTilEnd, "s")}s left`;
-                        }
-                        else if(this.milisecTilEnd >= time2mili("1m") && this.milisecTilEnd < time2mili("5m"))
-                        {
-                            tempStringHolder = `${getTime(this.milisecTilEnd, "m")}m and ${getTime(this.milisecTilEnd, "s")}s left`;
-                        }
-                        else if(this.milisecTilEnd >= time2mili("5m") && this.milisecTilEnd < time2mili("1h"))
-                        {
-                            tempStringHolder = `${getTime(this.milisecTilEnd, "m")}m left`;
-                        }
-                        else if(this.milisecTilEnd >= time2mili("1h") && this.milisecTilEnd <= time2mili("3h"))
-                        {
-                            if(getTime(this.milisecTilEnd, "m") === 0)
-                            {
-                                tempStringHolder = `${getTime(this.milisecTilEnd, "h")}h left`;
-                            }
-                            else
-                            {
-                                tempStringHolder = `${getTime(this.milisecTilEnd, "h")}h and ${getTime(this.milisecTilEnd, "m")}m left`;
-                            }
-                        }
-                        else if(this.milisecTilEnd > time2mili("3h") && this.milisecTilEnd <= time2mili("5h"))
-                        {
-                            if(getTime(this.milisecTilEnd, "m") === 0)
-                            {
-                                tempStringHolder = `${getTime(this.milisecTilEnd, "h")}h left`;
-                            }
-                            else if(getTime(this.milisecTilEnd, "m") === 30)
-                            {
-                                tempStringHolder = `${getTime(this.milisecTilEnd, "h")} and a half hr left`;
-                            }
-                            else if(getTime(this.milisecTilEnd, "m") > 30)
-                            {
-                                tempStringHolder = `over ${getTime(this.milisecTilEnd, "h")} and a half hr left`;
-                            }
-                            else if(getTime(this.milisecTilEnd, "m") < 30)
-                            {
-                                tempStringHolder = `under ${getTime(this.milisecTilEnd, "h")} and a half hr left`;
-                            }
-                        }
-                        else if(this.milisecTilEnd > time2mili("5h") && this.milisecTilEnd < time2mili("1d"))
-                        {
-                            if(getTime(this.milisecTilEnd, "m") === 0)
-                            {
-                                tempStringHolder = `${getTime(this.milisecTilEnd, "h")}h left`;
-                            }
-                            else
-                            {
-                                tempStringHolder = `about ${getTime(this.milisecTilEnd, "h")}h left`;
-                            }
-                        }
-                        else if(this.milisecTilEnd >= time2mili("1d"))
-                        {
-                            tempStringHolder = `${getTime(this.milisecTilEnd, "d")}d and ${getTime(this.milisecTilEnd, "h")}h left`;
-                        }
+                        getTimeLeftAndSmallerTimerTextContent("till end of current class", this.milisecTilEnd);
                         
                         if(timeLeftTilTimer.textContent !== tempStringHolder)
                         {
@@ -2004,42 +1951,74 @@
             return miliVal;
         }
         
-        function getTime(miliVal, output)
+        function getTime(miliVal, output, roundOrFloor)
         {
             const dayConversion = 24 * 60 * 60 * 1000;
             const hourConversion = 60 * 60 * 1000;
             const minConversion = 60 * 1000;
             const secConversion = 1000;
+
+            let resultTime = 0;
+
+            const roundOrFloorVal = (val, roundOrFloorCheck) =>
+            {
+                if(roundOrFloorCheck === "round")
+                {
+                    val = Math.round(val);
+                }
+                else if(roundOrFloorCheck === "floor")
+                {
+                    val = Math.floor(val);
+                }
+
+                return val;
+            };
             
             if(output === "d")
             {
-                const day = Math.floor(miliVal / (dayConversion));
+                const day = miliVal / (dayConversion);
+
+                resultTime = day;
+
+                resultTime = roundOrFloorVal(resultTime, roundOrFloor);
                 
-                return day;
+                return resultTime;
             }
             else if(output === "h")
             {
                 const day = dayConversion * Math.floor(miliVal / dayConversion);
-                const hour = Math.floor((miliVal - day) / hourConversion);
+                const hour = (miliVal - day) / hourConversion;
+
+                resultTime = hour;
                 
-                return hour;
+                resultTime = roundOrFloorVal(resultTime, roundOrFloor);
+                
+                return resultTime;
             }
             else if(output === "m")
             {
                 const day = dayConversion * Math.floor(miliVal / dayConversion);
                 const hour = hourConversion * Math.floor((miliVal - day) / hourConversion);
-                const min = Math.floor((miliVal - day - hour) / minConversion);
+                const min = (miliVal - day - hour) / minConversion;
+
+                resultTime = min;
                 
-                return min;
+                resultTime = roundOrFloorVal(resultTime, roundOrFloor);
+                
+                return resultTime;
             }
             else if(output === "s")
             {
                 const day = dayConversion * Math.floor(miliVal / dayConversion);
                 const hour = hourConversion * Math.floor((miliVal - day) / hourConversion);
                 const min = minConversion * Math.floor((miliVal - day - hour) / minConversion);
-                const sec = Math.round((miliVal - day - hour - min) / secConversion);
+                const sec = (miliVal - day - hour - min) / secConversion;
+
+                resultTime = sec;
                 
-                return sec;
+                resultTime = roundOrFloorVal(resultTime, roundOrFloor);
+                
+                return resultTime;
             }
         }
         
