@@ -212,9 +212,9 @@
             
             
             init() // must always be call before pull() and once should be called once
-            {
+            {//used for initialize all of the properties in localstorage
                 const listOfProperties = Object.keys(dataSave);
-                const key2ClearList = ["init", "pull", "push"];
+                const key2ClearList = ["init", "pull", "push", "read", "readDataThenInsert"];
                 
                 for(let i = 0; i < key2ClearList.length; i++) //take out all the methods
                 {
@@ -239,9 +239,9 @@
             },
             
             pull() //should only be called once, after init()
-            {
+            {//used for pulling down data from localstorage
                 const listOfProperties = Object.keys(dataSave);
-                const key2ClearList = ["init", "pull", "push"];
+                const key2ClearList = ["init", "pull", "push", "read", "readDataThenInsert"];
                 
                 for(let i = 0; i < key2ClearList.length; i++) //take out all the methods
                 {
@@ -263,11 +263,11 @@
             },
             
             push(inputtedPropertyName) //update the dataSave obj first before calling this
-            {
+            {//used for pushing all the data saved in dataSave to localstorage 
                 if(inputtedPropertyName === undefined)
                 {
                     const listOfProperties = Object.keys(dataSave);
-                    const key2ClearList = ["init", "pull", "push"];
+                    const key2ClearList = ["init", "pull", "push", "read", "readDataThenInsert"];
                     
                     for(let i = 0; i < key2ClearList.length; i++) //take out all the methods
                     {
@@ -292,6 +292,87 @@
                     
                     localStorage[`${inputtedPropertyName}`] = JSONed;
                 }
+            },
+
+            read()
+            {// used to read all the data in localstorage
+                // then insert them into an object with keys and then JSON.stringify the object and return it
+                const listOfProperties = Object.keys(dataSave);
+                const key2ClearList = ["init", "pull", "push", "read", "readDataThenInsert"];
+                const readedProperty = {};
+                
+                for(let i = 0; i < key2ClearList.length; i++) //take out all the methods
+                {
+                    if(listOfProperties.includes(key2ClearList[i]))
+                    {
+                        listOfProperties.splice(listOfProperties.indexOf(key2ClearList[i]), 1);
+                    }
+                }
+                
+                for(let i = 0; i < listOfProperties.length; i++) // loop though each property in localStorage
+                {                                                   // and update each correspongding property
+                    // in dataSave obj
+                    const currentPropertyName = listOfProperties[i];
+                    
+                    const unJSONed = JSON.parse(localStorage[`${currentPropertyName}`])
+                    
+                    readedProperty[`${listOfProperties[i]}`] = unJSONed;
+                }
+
+                return JSON.stringify(readedProperty);
+            },
+
+            readDataThenInsert()
+            {
+                const inputtedString = window.prompt("Please insert the copied data here:");
+
+                if(inputtedString === null || inputtedString === "")
+                {
+                    return;
+                }
+                
+                const input = JSON.parse(inputtedString);
+
+                const inputProperties = Object.keys(input);
+
+                const dataSaveProperties = Object.keys(dataSave);
+                const key2ClearList = ["init", "pull", "push", "read", "readDataThenInsert"];
+                
+                for(let i = 0; i < key2ClearList.length; i++) //take out all the methods
+                {
+                    if(dataSaveProperties.includes(key2ClearList[i]))
+                    {
+                        dataSaveProperties.splice(dataSaveProperties.indexOf(key2ClearList[i]), 1);
+                    }
+                }
+
+                if(inputProperties.length !== dataSaveProperties.length) // check for the input validity
+                {
+                    window.alert("Invalid data.\nPlease try to get a new copy of the datas from the other device.");
+                    return;
+                }
+                else
+                {
+                    for(let i = 0; i < inputProperties.length; i++)
+                    {
+                        if(dataSaveProperties.includes(inputProperties[i]) === false)
+                        {
+                            window.alert("Invalid data.\nPlease try to get a new copy of the datas from the other device.");
+                            return;
+                        }
+                    }
+                }
+
+                for(let i = 0; i < inputProperties.length; i++)
+                {
+                    dataSave[`${inputProperties[i]}`] = input[`${inputProperties[i]}`];
+
+                    dataSave.push(`${`${inputProperties[i]}`}`);
+                }
+
+                edit.classBusIndexTracker = 0;
+
+                loadContent = true;
             }
         };
         
@@ -1011,6 +1092,17 @@
                     <br>
 
                     <div id="content"></div>
+
+                    <br>
+                    <br>
+                    <br>
+
+                    <h1>Transfer data between devices:</h1>
+
+                    <br>
+
+                    <button class="editingButtonContent" style="margin-right:1em" onclick="copyText2ClipBoard(dataSave.read())">Copy saved data</button>
+                    <button class="editingButtonContent" onclick="dataSave.readDataThenInsert()">Upload data</button>
                 `;
                 
                 stringVal = template;
@@ -1591,12 +1683,12 @@
                 break;
                 
                 case "classOrBusChangeEdit":
-                if(edit.classBusIndexTracker !== 0 && val === -1)
+                if(edit.classBusIndexTracker > 0 && val === -1)
                 {
                     edit.classBusIndexTracker += val;
                     loadContent = true;
                 }
-                else if(edit.classBusIndexTracker !== dataSave.classList[edit.dayOfWeekTracker].length - 1 && val === 1)
+                else if((edit.classBusIndexTracker < (dataSave.classList[edit.dayOfWeekTracker].length - 1)) && val === 1)
                 {
                     edit.classBusIndexTracker += val;
                     loadContent = true;
@@ -1844,6 +1936,8 @@
                 // after the current one is deleted
                 
                 dataSave.classList[edit.dayOfWeekTracker].splice(edit.classBusIndexTracker, 1);
+
+                dataSave.push("classList");
                 
                 loadContent = true;
             }
@@ -2105,6 +2199,23 @@
 
             return indexTracker + 1;
         }
+
+        function copyText2ClipBoard(text)
+        {
+            const elementSoon2BeDelete = document.createElement("textarea");
+
+            elementSoon2BeDelete.value = text;
+
+            document.body.appendChild(elementSoon2BeDelete);
+
+            elementSoon2BeDelete.select();
+
+            navigator.clipboard.writeText(elementSoon2BeDelete.value);
+
+            document.body.removeChild(elementSoon2BeDelete);
+
+            alert("Copied.");
+        }
     
     
         // loading showing element function, must have the needed HTML to function
@@ -2349,7 +2460,7 @@
                 }
                 else
                 {
-                    stringContent += `<button class="editingButtonContent" onclick="addNewClassBus()">Cancle</button>`;
+                    stringContent += `<button class="editingButtonContent" onclick="addNewClassBus()">Cancel</button>`;
                 }
 
                 if(dataSave.classList[edit.dayOfWeekTracker].length !== 0)
