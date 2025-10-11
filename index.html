@@ -2210,7 +2210,7 @@
 
             elementSoon2BeDelete.select();
 
-            navigator.clipboard.writeText(elementSoon2BeDelete.value);
+            document.execCommand('copy');
 
             document.body.removeChild(elementSoon2BeDelete);
 
