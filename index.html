@@ -1752,9 +1752,9 @@
             const startTimeList = [];
             const endTimeList = [];
             
-            const currentClassList = dataSave.classList[edit.dayOfWeekTracker];
+            const currentClassList = dataSave.classList[edit.dayOfWeekTracker]; //get today class list
             
-            for(let i = 0; i < currentClassList.length; i++)
+            for(let i = 0; i < currentClassList.length; i++) //get all today's class start and end time
             {
                 startTimeList[i] = timeString2Num(currentClassList[i].timeStart);
                 endTimeList[i] = timeString2Num(currentClassList[i].timeEnd);
@@ -1762,6 +1762,7 @@
             
             if(updateOrAdd === "update")
             {
+                //cut out the current class
                 const checkingStartArray = startTimeList.toSpliced(edit.classBusIndexTracker, 1);
                 const checkingEndArray = endTimeList.toSpliced(edit.classBusIndexTracker, 1);
 
@@ -2287,21 +2288,15 @@ Press "OK" to finish.
     
         function giveInsertingIndexInAscendingList(val, list)
         {
-            list = [...list];
-            
-            let indexTracker = NaN;
-            
             for(let i = 0; i < list.length; i++)
             {
-                indexTracker = i;
-                
                 if(list[i] > val)
                 {
-                    return indexTracker;
+                    return i;
                 }
             }
 
-            return indexTracker + 1;
+            return list.length;
         }
 
         function copyText2ClipBoard(text)
@@ -2493,7 +2488,7 @@ Press "OK" to finish.
         
         function dayOfWeekChange(changeOrNot)
         {
-            //if changeOrNot is true then rotate tothe next day and display it, else only display
+            //if changeOrNot is true then rotate to the next day and display it, else only display
             
             if(changeOrNot)
             {
