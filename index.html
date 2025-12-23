@@ -1,0 +1,2691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>class and bus</title>
+    
+    <style>
+        #content ul
+        {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .classBusSwitch
+        {
+            border: black solid 0.15em;
+            
+            padding: 0.25em;
+            
+            font-family: monospace;
+            font-size: 1.5em;
+            font-weight: 900;
+            letter-spacing: 1em;
+            text-indent: 1em;
+            text-align: center;
+            
+            position: fixed;
+            bottom: 0;
+            
+            background-color: rgba(46, 155, 251, 0.578)
+        }
+        .classBusSwitch:active
+        {
+            background-color: rgba(133, 193, 245, 0.902)
+        }
+        li
+        {
+            font-family: sans-serif;
+            font-size: 1.25em;
+            width: 17.5em;
+        }
+        #timer
+        {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            
+            font-family: monospace;
+            font-weight: 900;
+        }
+        #currentTime
+        {
+            font-size: 3.5em;
+        }
+        .smallerTimer
+        {
+            font-size: 1.75em;
+        }
+        hr
+        {
+            border: none;
+            height: 0.115em;
+            background-color: #333;
+        }
+        #adjustButton
+        {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: sans-serif;
+            
+            position: relative;
+        }
+        #backButton
+        {
+            position: absolute;
+            left: 0;
+            
+            font-size: 1.5em;
+            
+            width: 2em;
+            height: auto;
+            
+            filter: invert(0%) sepia(19%) saturate(7500%) hue-rotate(176deg) brightness(104%) contrast(102%);
+        }
+        #backButton:active
+        {
+            filter: invert(21%) sepia(0%) saturate(1298%) hue-rotate(150deg) brightness(101%) contrast(87%);
+        }
+        #nextButton
+        {
+            position: absolute;
+            right: 0;
+            
+            font-size: 1.5em;
+            
+            width: 2em;
+            height: auto;
+            
+            filter: invert(0%) sepia(19%) saturate(7500%) hue-rotate(176deg) brightness(104%) contrast(102%);
+        }
+        #nextButton:active
+        {
+            filter: invert(21%) sepia(0%) saturate(1298%) hue-rotate(150deg) brightness(101%) contrast(87%);
+        }
+        .flex
+        {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        #tellWhenNext
+        {
+            text-align: center;
+            font-family: sans-serif;
+            font-style: italic;
+            font-size: 1.25em;
+            width: 75vw;
+        }
+        #adjustText
+        {
+            width: 11em;
+            text-align: center;
+            height: 2.3em;
+            
+            font-size: 1.5em;
+            
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #classBusStatus
+        {
+            text-align: center;
+            font-size: 2.25em;
+            font-family: monospace;
+            margin: 0.75em;
+        }
+        #editSwitch
+        {
+            left: 0;
+        }
+        #modeSwitch
+        {
+            right: 0;
+        }
+        #dayOfWeekChangeForEdit
+        {
+            font-size: 1.5em;
+        }
+        .editingInputLable
+        {
+            font-size: 1.75em;
+            
+        }
+        .editingInput
+        {
+            font-size: 1.25em;
+            margin-top: 0.1em;
+            margin-bottom: 0.1em;
+        }
+        .editingButtonContent
+        {
+            font-size: 1.25em;
+        }
+        #noClassBusText
+        {
+            font-size: 2em;
+            text-align: center;
+            
+            position: fixed;
+            top: 50vh;
+            transform: translate(0, -50%);
+        }
+        input
+        {
+            font-size: 0.75em;
+        }
+    </style>
+</head>
+<body>
+    
+    <script>
+        
+        //NOTICE: pls don't ask why my code work, i dunno xdd
+        
+        
+        // global variable
+        
+        let loadContent = true;
+        let changeMode = true;
+        
+        
+        // global obj
+        
+        const dataSave = //store all the values that is stored in localStorage,
+        {                  // get all the values from dataSave.pull()
+            
+            // NOTE: all the value that is store in the properties are place holder to insert in localStorage
+            // if localStorage never hold any of this value
+            
+            classList: [[], [], [], [], [], [], []], //store all the class here
+            busList: {placeList: []}, //store all the bus here
+            
+            clockType: "24h",//used to track which clock display the timer should use,
+                                // "12h" for 12 hour clock and "24h" for 24 hour clock
+            timeTilType: "next", //used to track what is the smaller timer tracking:
+                                    // have the value of "next" to show how long till the next class or bus end
+                                    // or have "end" to how long till the current one end
+            showTodayOrTomorrow: "today", // only used if today and tomorrow have class,
+                                            // and had pass today last classending time
+                                            // store "today" if showing today class and "tomorrow" for tomorrow
+            switchVal: "class", // track wherever the user is looking at "class" or "bus"
+            how2UseShown: false, // track wherever the user is shown the "How to use" text yet
+            
+            
+            
+            init() // must always be call before pull() and once should be called once
+            {//used for initialize all of the properties in localstorage
+                const listOfProperties = Object.keys(dataSave);
+                const key2ClearList = ["init", "pull", "push", "read", "readDataThenInsert"];
+                
+                for(let i = 0; i < key2ClearList.length; i++) //take out all the methods
+                {
+                    if(listOfProperties.includes(key2ClearList[i]))
+                    {
+                        listOfProperties.splice(listOfProperties.indexOf(key2ClearList[i]), 1);
+                    }
+                }
+                
+                for(let i = 0; i < listOfProperties.length; i++) //loop though and if a properties is
+                {                                                   // not in localStorage then
+                    // initialize it
+                    const currentPropertyName = listOfProperties[i];
+                    
+                    if(localStorage[`${currentPropertyName}`] === undefined)
+                    {
+                        const JSONedVal = JSON.stringify(this[`${currentPropertyName}`]);
+                        
+                        localStorage.setItem(`${currentPropertyName}`, JSONedVal);
+                    }
+                }
+            },
+            
+            pull() //should only be called once, after init()
+            {//used for pulling down data from localstorage
+                const listOfProperties = Object.keys(dataSave);
+                const key2ClearList = ["init", "pull", "push", "read", "readDataThenInsert"];
+                
+                for(let i = 0; i < key2ClearList.length; i++) //take out all the methods
+                {
+                    if(listOfProperties.includes(key2ClearList[i]))
+                    {
+                        listOfProperties.splice(listOfProperties.indexOf(key2ClearList[i]), 1);
+                    }
+                }
+                
+                for(let i = 0; i < listOfProperties.length; i++) // loop though each property in localStorage
+                {                                                   // and update each correspongding property
+                    // in dataSave obj
+                    const currentPropertyName = listOfProperties[i];
+                    
+                    const unJSONed = JSON.parse(localStorage[`${currentPropertyName}`])
+                    
+                    dataSave[`${currentPropertyName}`] = unJSONed;
+                }
+            },
+            
+            push(inputtedPropertyName) //update the dataSave obj first before calling this
+            {//used for pushing all the data saved in dataSave to localstorage 
+                if(inputtedPropertyName === undefined)
+                {
+                    const listOfProperties = Object.keys(dataSave);
+                    const key2ClearList = ["init", "pull", "push", "read", "readDataThenInsert"];
+                    
+                    for(let i = 0; i < key2ClearList.length; i++) //take out all the methods
+                    {
+                        if(listOfProperties.includes(key2ClearList[i]))
+                        {
+                            listOfProperties.splice(listOfProperties.indexOf(key2ClearList[i]), 1);
+                        }
+                    }
+                    
+                    for(let i = 0; i < listOfProperties.length; i++) // loop though each property in dataSave
+                    {                                                   // and push it to localStorage
+                        const currentPropertyName = listOfProperties[i];
+                        
+                        const JSONed = JSON.stringify(dataSave[`${currentPropertyName}`]);
+                        
+                        localStorage[`${currentPropertyName}`] = JSONed;
+                    }
+                }
+                else
+                {
+                    const JSONed = JSON.stringify(dataSave[`${inputtedPropertyName}`]);
+                    
+                    localStorage[`${inputtedPropertyName}`] = JSONed;
+                }
+            },
+
+            read()
+            {// used to read all the data in localstorage
+                // then insert them into an object with keys and then JSON.stringify the object and return it
+                const listOfProperties = Object.keys(dataSave);
+                const key2ClearList = ["init", "pull", "push", "read", "readDataThenInsert"];
+                const readedProperty = {};
+                
+                for(let i = 0; i < key2ClearList.length; i++) //take out all the methods
+                {
+                    if(listOfProperties.includes(key2ClearList[i]))
+                    {
+                        listOfProperties.splice(listOfProperties.indexOf(key2ClearList[i]), 1);
+                    }
+                }
+                
+                for(let i = 0; i < listOfProperties.length; i++) // loop though each property in localStorage
+                {                                                   // and update each correspongding property
+                    // in dataSave obj
+                    const currentPropertyName = listOfProperties[i];
+                    
+                    const unJSONed = JSON.parse(localStorage[`${currentPropertyName}`])
+                    
+                    readedProperty[`${listOfProperties[i]}`] = unJSONed;
+                }
+
+                return JSON.stringify(readedProperty);
+            },
+
+            readDataThenInsert()
+            {
+                const inputtedString = window.prompt("Please insert the copied data here:");
+
+                if(inputtedString === null || inputtedString === "")
+                {
+                    return;
+                }
+                
+                const input = JSON.parse(inputtedString);
+
+                const inputProperties = Object.keys(input);
+
+                const dataSaveProperties = Object.keys(dataSave);
+                const key2ClearList = ["init", "pull", "push", "read", "readDataThenInsert"];
+                
+                for(let i = 0; i < key2ClearList.length; i++) //take out all the methods
+                {
+                    if(dataSaveProperties.includes(key2ClearList[i]))
+                    {
+                        dataSaveProperties.splice(dataSaveProperties.indexOf(key2ClearList[i]), 1);
+                    }
+                }
+
+                if(inputProperties.length !== dataSaveProperties.length) // check for the input validity
+                {
+                    window.alert("Invalid data.\nPlease try to get a new copy of the datas from the other device.");
+                    return;
+                }
+                else
+                {
+                    for(let i = 0; i < inputProperties.length; i++)
+                    {
+                        if(dataSaveProperties.includes(inputProperties[i]) === false)
+                        {
+                            window.alert("Invalid data.\nPlease try to get a new copy of the datas from the other device.");
+                            return;
+                        }
+                    }
+                }
+
+                for(let i = 0; i < inputProperties.length; i++)
+                {
+                    dataSave[`${inputProperties[i]}`] = input[`${inputProperties[i]}`];
+
+                    dataSave.push(`${`${inputProperties[i]}`}`);
+                }
+
+                edit.classBusIndexTracker = 0;
+
+                loadContent = true;
+            }
+        };
+        
+        const showing = 
+        {
+            haveAnyClass: false,
+            haveAnyBus: false,
+            classBusOffSetTracker: 0,
+            tellWhenNextText: "",
+            showingDayNum: NaN,
+            showingIndex: NaN,
+            
+            
+            init() //CHANGEEEEEEE
+            {
+                for(let i = 0; i < dataSave.classList.length; i++)
+                {
+                    if(dataSave.classList[i].length !== 0)
+                    {
+                        this.haveAnyClass = true;
+                        break;
+                    }
+                }
+                
+                if(dataSave.busList.placeList.length !== 0)
+                {
+                    this.haveAnyBus = true;
+                }
+            }
+        };
+        
+        const edit = 
+        {
+            modeOnCheck: false,
+            dayOfWeekTracker: 0,
+            classBusIndexTracker: 0,
+            addNewMode: false
+        };
+        
+        const time = 
+        {
+            miliSinceEpoch: NaN,
+            
+            sec: NaN,
+            min: NaN,
+            hour: NaN,
+            dayOfWeek: NaN,
+            
+            milisecTilNext: NaN,
+            milisecTilEnd: NaN,
+            
+            miliSinceEpoch4Next: NaN,
+            dayOfWeekNext: NaN,
+            nextBusOrClassIndex: NaN, //store the class, and bus,'s index to track, the soonest is the lowest
+            currentBusOrClassIndexToday: NaN, //store the class, and bus,'s index for rn
+            // if it is -1, meaning there is no class today
+            
+            update()
+            {
+                this.miliSinceEpoch = Date.now();
+                
+                
+                const currentDate = new Date(this.miliSinceEpoch);
+                
+                this.sec = currentDate.getSeconds();
+                this.min = currentDate.getMinutes();
+                this.hour = currentDate.getHours();
+                this.dayOfWeek = currentDate.getDay();
+                
+                
+                
+                if(dataSave.switchVal === "class" && showing.haveAnyClass === true)
+                {
+                    this.milisecTilNext = this.miliSinceEpoch4Next - this.miliSinceEpoch;
+                    
+                    if(this.currentBusOrClassIndexToday !== -1 && !Number.isNaN(this.currentBusOrClassIndexToday))
+                    {
+                        const currentBusOrClassEndTime = new Date(`${currentDate.getFullYear()}-${insertZeroForSingleDigit(currentDate.getMonth() + 1)}-${insertZeroForSingleDigit(currentDate.getDate())}T${dataSave.classList[this.dayOfWeek][this.currentBusOrClassIndexToday].timeEnd}`);
+                        
+                        this.milisecTilEnd = currentBusOrClassEndTime.getTime() - this.miliSinceEpoch;
+                    }
+                    
+                    if(this.milisecTilEnd <= 0 || this.milisecTilNext <= 0)
+                    {
+                        loadContent = true;
+                    }
+                    
+                    
+                    
+                    if(loadContent)
+                    {
+                        const oneDayInMiliSec = 1000 * 60 * 60 * 24;
+                        
+                        let milisecOffSetIncrease = NaN;
+                        
+                        
+                        this.dayOfWeekNext = this.dayOfWeek;
+                        
+                        if(dataSave.classList[this.dayOfWeekNext].length !== 0) //check if today have any class
+                        { //if true find the next class
+                            let findNoNextCheck = true;
+                            
+                            //loop till finding the starting class time that is larger than current time
+                            for(let i = 0; i < dataSave.classList[this.dayOfWeekNext].length; i++)
+                            {
+                                const holderDate = new Date(`${currentDate.getFullYear()}-${insertZeroForSingleDigit(currentDate.getMonth() + 1)}-${insertZeroForSingleDigit(currentDate.getDate())}T${dataSave.classList[this.dayOfWeekNext][i].timeStart}`);
+                                
+                                if((holderDate.getTime() - currentDate.getTime()) >= 0)
+                                {
+                                    this.nextBusOrClassIndex = i;
+                                    
+                                    findNoNextCheck = false;
+                                    
+                                    milisecOffSetIncrease = 0;
+                                    
+                                    break;
+                                }
+                            }
+                            
+                            if(findNoNextCheck) //if none found
+                            {
+                                let dayCheckCount = 1;
+                                
+                                do //find the next day that have class and pick the first class
+                                {
+                                    this.dayOfWeekNext = dayResetWhenOverFlow(this.dayOfWeekNext + 1);
+                                    
+                                    if(dataSave.classList[this.dayOfWeekNext].length !== 0)
+                                    {
+                                        this.nextBusOrClassIndex = 0;
+                                        
+                                        milisecOffSetIncrease = oneDayInMiliSec * dayCheckCount;
+                                        
+                                        break;
+                                    }
+                                    
+                                    this.dayOfWeekNext = dayResetWhenOverFlow(this.dayOfWeekNext + 1);
+                                    
+                                    dayCheckCount++;
+                                }
+                                while(dayCheckCount < 7);
+                                
+                                //if loop through all the class in the other day and found none
+                                //then get the first class of today
+                                if(dayCheckCount === 7)
+                                {
+                                    this.nextBusOrClassIndex = 0;
+                                    
+                                    this.dayOfWeekNext = this.dayOfWeek;
+                                    
+                                    milisecOffSetIncrease = 0;
+                                }
+                            }
+                            
+                            
+                            let noClassOrBusTodayCheck = true;
+                            
+                            //loop till finding a class or bus that have the current time sit between the starting and ending time
+                            for(let i = 0; i < dataSave.classList[this.dayOfWeek].length; i++)
+                            {
+                                const holderStartDate = new Date(`${currentDate.getFullYear()}-${insertZeroForSingleDigit(currentDate.getMonth() + 1)}-${insertZeroForSingleDigit(currentDate.getDate())}T${dataSave.classList[this.dayOfWeek][i].timeStart}`);
+                                const holderEndDate = new Date(`${currentDate.getFullYear()}-${insertZeroForSingleDigit(currentDate.getMonth() + 1)}-${insertZeroForSingleDigit(currentDate.getDate())}T${dataSave.classList[this.dayOfWeek][i].timeEnd}`);
+                                
+                                if(currentDate.getTime() >= holderStartDate.getTime() && currentDate.getTime() <= holderEndDate.getTime())
+                                {
+                                    this.currentBusOrClassIndexToday = i;
+                                    noClassOrBusTodayCheck = false;
+                                    
+                                    break;
+                                }
+                            }
+                            
+                            if(noClassOrBusTodayCheck) //if found none, just set the index to -1
+                            {
+                                this.currentBusOrClassIndexToday = -1;
+                            }
+                        }
+                        else
+                        { //if today have no class
+                            let dayCheckCount = 0;
+                            
+                            do //loop till find the next day with class
+                            {
+                                if(dataSave.classList[this.dayOfWeekNext].length !== 0)
+                                { //when find get the first class of the day
+                                    this.nextBusOrClassIndex = 0;
+                                    
+                                    milisecOffSetIncrease = dayCheckCount * oneDayInMiliSec;
+                                    
+                                    break;
+                                }
+                                
+                                this.dayOfWeekNext = dayResetWhenOverFlow(this.dayOfWeekNext + 1);
+                                
+                                dayCheckCount++;
+                            }
+                            while(dayCheckCount < 7);
+                            
+                            this.currentBusOrClassIndexToday = -1; //just set the index to -1 if no class today
+                        }
+                        
+                        
+                        const nextDateBeforeOffset = new Date(`${currentDate.getFullYear()}-${insertZeroForSingleDigit(currentDate.getMonth() + 1)}-${insertZeroForSingleDigit(currentDate.getDate())}T${dataSave.classList[this.dayOfWeekNext][this.nextBusOrClassIndex].timeStart}`);
+                        
+                        //shift the milisec accroding to the shifted amount of day
+                        this.miliSinceEpoch4Next = nextDateBeforeOffset.getTime() + milisecOffSetIncrease;
+                    }
+                }
+            },
+            timer()
+            {
+                const currentTime = document.getElementById("currentTime");
+                const timeLeftTilTimer = document.getElementById("timeLeftTilTimer");
+                const smallerTimerText = document.getElementById("smallerTimerText");
+                
+                let tempStringHolder = "";
+                
+                
+                if(dataSave.clockType === "24h")
+                {
+                    tempStringHolder = `${insertZeroForSingleDigit(this.hour)}:${insertZeroForSingleDigit(this.min)}`;
+                }
+                else if(dataSave.clockType === "12h")
+                {
+                    tempStringHolder = convertTo12hClock(this.hour, this.min);
+                }
+                
+                if(currentTime.textContent !== tempStringHolder)
+                {
+                    currentTime.textContent = tempStringHolder;
+                }
+                
+                
+                const getTimeLeftAndSmallerTimerTextContent = (smallerTimerTextContent, getTimeMiliSecVal) =>
+                {
+                    smallerTimerText.textContent = smallerTimerTextContent;
+                    
+                    if(getTimeMiliSecVal <= time2mili("59s"))
+                    {
+                        tempStringHolder = `${getTime(getTimeMiliSecVal, "s", "round")}s left`;
+                    }
+                    else if(getTimeMiliSecVal >= time2mili("1m") && getTimeMiliSecVal < time2mili("5m"))
+                    {
+                        tempStringHolder = `${getTime(getTimeMiliSecVal, "m", "floor")}m and ${getTime(getTimeMiliSecVal, "s", "round")}s left`;
+                    }
+                    else if(getTimeMiliSecVal >= time2mili("5m") && getTimeMiliSecVal < time2mili("1h"))
+                    {
+                        tempStringHolder = `${getTime(getTimeMiliSecVal, "m", "round")}m left`;
+                    }
+                    else if(getTimeMiliSecVal >= time2mili("1h") && getTimeMiliSecVal <= time2mili("3h"))
+                    {
+                        if(getTime(getTimeMiliSecVal, "m", "floor") === 0)
+                        {
+                            tempStringHolder = `${getTime(getTimeMiliSecVal, "h", "floor")}h left`;
+                        }
+                        else
+                        {
+                            tempStringHolder = `${getTime(getTimeMiliSecVal, "h", "floor")}h and ${getTime(getTimeMiliSecVal, "m", "round")}m left`;
+                        }
+                    }
+                    else if(getTimeMiliSecVal > time2mili("3h") && getTimeMiliSecVal <= time2mili("5h"))
+                    {
+                        if(getTime(getTimeMiliSecVal, "m", "floor") === 0)
+                        {
+                            tempStringHolder = `${getTime(getTimeMiliSecVal, "h", "floor")}h left`;
+                        }
+                        else if(getTime(getTimeMiliSecVal, "m", "floor") === 30)
+                        {
+                            tempStringHolder = `${getTime(getTimeMiliSecVal, "h", "floor")} and a half hr left`;
+                        }
+                        else if(getTime(getTimeMiliSecVal, "m", "floor") > 30)
+                        {
+                            tempStringHolder = `over ${getTime(getTimeMiliSecVal, "h", "floor")} and a half hr left`;
+                        }
+                        else if(getTime(getTimeMiliSecVal, "m", "floor") < 30)
+                        {
+                            tempStringHolder = `under ${getTime(getTimeMiliSecVal, "h", "floor")} and a half hr left`;
+                        }
+                    }
+                    else if(getTimeMiliSecVal > time2mili("5h") && getTimeMiliSecVal < time2mili("1d"))
+                    {
+                        if(getTime(getTimeMiliSecVal, "m", "floor") === 0)
+                        {
+                            tempStringHolder = `${getTime(getTimeMiliSecVal, "h", "floor")}h left`;
+                        }
+                        else
+                        {
+                            tempStringHolder = `about ${getTime(getTimeMiliSecVal, "h", "round")}h left`;
+                        }
+                    }
+                    else if(getTimeMiliSecVal >= time2mili("1d"))
+                    {
+                        tempStringHolder = `${getTime(getTimeMiliSecVal, "d", "floor")}d and ${getTime(getTimeMiliSecVal, "h", "round")}h left`;
+                    }
+                };
+
+                if(dataSave.timeTilType === "next")
+                {
+                    getTimeLeftAndSmallerTimerTextContent("till next class", this.milisecTilNext);
+
+                    if(timeLeftTilTimer.textContent !== tempStringHolder)
+                    {
+                        timeLeftTilTimer.textContent = tempStringHolder;
+                        timeLeftTilTimer.style.color = "black";
+                    }
+                }
+                else if(dataSave.timeTilType === "end")
+                {
+                    if(this.currentBusOrClassIndexToday === -1)
+                    {
+                        smallerTimerText.textContent = "There is currently no class";
+                        tempStringHolder = "nothing here hehe";
+                        
+                        if(timeLeftTilTimer.textContent !== tempStringHolder)
+                        {
+                            timeLeftTilTimer.textContent = tempStringHolder;
+                            timeLeftTilTimer.style.color = "white";
+                        }
+                    }
+                    else
+                    {
+                        getTimeLeftAndSmallerTimerTextContent("till end of current class", this.milisecTilEnd);
+                        
+                        if(timeLeftTilTimer.textContent !== tempStringHolder)
+                        {
+                            timeLeftTilTimer.textContent = tempStringHolder;
+                            timeLeftTilTimer.style.color = "black";
+                        }
+                    }
+                }
+            }
+        };
+        
+        
+        // project-specific functional function, can't be use in another program
+        
+        function giveHtmlString(editModeCheck)
+        {
+            let stringVal = "";
+            
+            if(editModeCheck)
+            {
+                const leftArrowSvg =
+                `
+                    <svg id="backButton" transform="scale(-1, 1)" onclick="change(-1, 'classOrBusChangeEdit')"
+                    width="7.165195mm"
+                    height="4.28333mm"
+                    viewBox="0 0 7.165195 4.28333"
+                    version="1.1"
+                    id="svg1"
+                    xml:space="preserve"
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlns:svg="http://www.w3.org/2000/svg"><defs
+                    id="defs1"><linearGradient
+                    id="swatch37"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop37" /></linearGradient><linearGradient
+                    id="swatch255"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop255" /></linearGradient><linearGradient
+                    id="swatch5374"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop5374" /></linearGradient><linearGradient
+                    id="swatch339"><stop
+                        style="stop-color:#2bffa3;stop-opacity:1;"
+                        offset="0"
+                        id="stop339" /></linearGradient><linearGradient
+                    id="swatch266"><stop
+                        style="stop-color:#4aa70c;stop-opacity:1;"
+                        offset="0"
+                        id="stop266" /></linearGradient><linearGradient
+                    id="swatch265"><stop
+                        style="stop-color:#3d124a;stop-opacity:1;"
+                        offset="0"
+                        id="stop265" /></linearGradient><linearGradient
+                    id="swatch3"><stop
+                        style="stop-color:#bebe2a;stop-opacity:1;"
+                        offset="0"
+                        id="stop3" /></linearGradient><linearGradient
+                    id="swatch2"><stop
+                        style="stop-color:#ebeb34;stop-opacity:1;"
+                        offset="0"
+                        id="stop2" /></linearGradient><linearGradient
+                    id="swatch1523"><stop
+                        style="stop-color:#ffffff;stop-opacity:1;"
+                        offset="0"
+                        id="stop1523" /></linearGradient><linearGradient
+                    id="swatch1490"><stop
+                        style="stop-color:#ff92e9;stop-opacity:1;"
+                        offset="0"
+                        id="stop1490" /></linearGradient><linearGradient
+                    id="swatch1489"><stop
+                        style="stop-color:#23cf84;stop-opacity:1;"
+                        offset="0"
+                        id="stop1489" /></linearGradient><linearGradient
+                    id="swatch1413"><stop
+                        style="stop-color:#ac794c;stop-opacity:1;"
+                        offset="0"
+                        id="stop1413" /></linearGradient><linearGradient
+                    id="swatch1412"><stop
+                        style="stop-color:#f3f3f3;stop-opacity:1;"
+                        offset="0"
+                        id="stop1412" /></linearGradient><linearGradient
+                    id="swatch948"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.81858408;"
+                        offset="0"
+                        id="stop948" /></linearGradient><linearGradient
+                    id="swatch901"><stop
+                        style="stop-color:#cecece;stop-opacity:1;"
+                        offset="0"
+                        id="stop901" /></linearGradient><linearGradient
+                    id="swatch863"><stop
+                        style="stop-color:#988100;stop-opacity:1;"
+                        offset="0"
+                        id="stop863" /></linearGradient><linearGradient
+                    id="swatch842"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.59292036;"
+                        offset="0"
+                        id="stop842" /></linearGradient><linearGradient
+                    id="swatch841"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.67920351;"
+                        offset="0"
+                        id="stop841" /></linearGradient><linearGradient
+                    id="linearGradient251"><stop
+                        style="stop-color:#974545;stop-opacity:1;"
+                        offset="0"
+                        id="stop250" /></linearGradient><linearGradient
+                    id="swatch53"><stop
+                        style="stop-color:#476dd2;stop-opacity:1;"
+                        offset="0"
+                        id="stop53" /></linearGradient><linearGradient
+                    id="swatch26"><stop
+                        style="stop-color:#977d35;stop-opacity:1;"
+                        offset="0"
+                        id="stop26" /></linearGradient><linearGradient
+                    id="swatch804"><stop
+                        style="stop-color:#b14949;stop-opacity:1;"
+                        offset="0"
+                        id="stop804" /></linearGradient><linearGradient
+                    id="swatch339-6"><stop
+                        style="stop-color:#4b7979;stop-opacity:1;"
+                        offset="0"
+                        id="stop339-8" /></linearGradient><linearGradient
+                    id="swatch266-6"><stop
+                        style="stop-color:#cf235f;stop-opacity:1;"
+                        offset="0"
+                        id="stop266-7" /></linearGradient><linearGradient
+                    id="swatch3-9"><stop
+                        style="stop-color:#1bb1b4;stop-opacity:1;"
+                        offset="0"
+                        id="stop3-0" /></linearGradient><linearGradient
+                    id="swatch2-1"><stop
+                        style="stop-color:#b41819;stop-opacity:1;"
+                        offset="0"
+                        id="stop2-9" /></linearGradient><linearGradient
+                    id="swatch1523-79"><stop
+                        style="stop-color:#814e60;stop-opacity:1;"
+                        offset="0"
+                        id="stop1523-0" /></linearGradient><linearGradient
+                    id="swatch1413-3"><stop
+                        style="stop-color:#794b4b;stop-opacity:1;"
+                        offset="0"
+                        id="stop1413-5" /></linearGradient><linearGradient
+                    id="swatch1412-31"><stop
+                        style="stop-color:#6d19b4;stop-opacity:1;"
+                        offset="0"
+                        id="stop1412-3" /></linearGradient><linearGradient
+                    id="linearGradient65798"><stop
+                        style="stop-color:#adadad;stop-opacity:1;"
+                        offset="0"
+                        id="stop65797" /></linearGradient><linearGradient
+                    id="swatch65668"><stop
+                        style="stop-color:#b02b2b;stop-opacity:1;"
+                        offset="0"
+                        id="stop65668" /></linearGradient><linearGradient
+                    id="swatch65645"><stop
+                        style="stop-color:#e1e1e1;stop-opacity:1;"
+                        offset="0"
+                        id="stop65645" /></linearGradient><linearGradient
+                    id="swatch65641"><stop
+                        style="stop-color:#eeeeee;stop-opacity:1;"
+                        offset="0"
+                        id="stop65641" /></linearGradient><linearGradient
+                    id="swatch65640"><stop
+                        style="stop-color:#222222;stop-opacity:1;"
+                        offset="0"
+                        id="stop65640" /></linearGradient><linearGradient
+                    id="swatch65639"><stop
+                        style="stop-color:#e8e8e8;stop-opacity:1;"
+                        offset="0"
+                        id="stop65639" /></linearGradient><linearGradient
+                    id="swatch85"><stop
+                        style="stop-color:#dfde0a;stop-opacity:1;"
+                        offset="0"
+                        id="stop85" /></linearGradient><linearGradient
+                    id="swatch82"><stop
+                        style="stop-color:#d51e8c;stop-opacity:1;"
+                        offset="0"
+                        id="stop82" /></linearGradient><linearGradient
+                    id="swatch81"><stop
+                        style="stop-color:#2e2e2e;stop-opacity:1;"
+                        offset="0"
+                        id="stop81" /></linearGradient><linearGradient
+                    id="swatch79"><stop
+                        style="stop-color:#292929;stop-opacity:1;"
+                        offset="0"
+                        id="stop79" /></linearGradient><linearGradient
+                    id="swatch68"><stop
+                        style="stop-color:#e0e0e0;stop-opacity:1;"
+                        offset="0"
+                        id="stop68" /></linearGradient></defs><g
+                    id="layer1"
+                    transform="translate(-4012.5577,-502.31359)"><path
+                    d="m 4016.0135,506.59691 v -0.93797 h -3.4557 v -2.40731 h 3.4557 v -0.93805 l 1.8549,1.07085 1.8546,1.07083 -1.8546,1.07082 z"
+                    style="fill-rule:evenodd;stroke:#000000;stroke-width:0;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill markers"
+                    id="path9" /></g>
+                    </svg>
+                `;
+                
+                const rightArrowSvg =
+                `
+                    <svg id="nextButton" onclick="change(1, 'classOrBusChangeEdit')"
+                    width="7.165195mm"
+                    height="4.28333mm"
+                    viewBox="0 0 7.165195 4.28333"
+                    version="1.1"
+                    id="svg1"
+                    xml:space="preserve"
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlns:svg="http://www.w3.org/2000/svg"><defs
+                    id="defs1"><linearGradient
+                    id="swatch37"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop37" /></linearGradient><linearGradient
+                    id="swatch255"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop255" /></linearGradient><linearGradient
+                    id="swatch5374"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop5374" /></linearGradient><linearGradient
+                    id="swatch339"><stop
+                        style="stop-color:#2bffa3;stop-opacity:1;"
+                        offset="0"
+                        id="stop339" /></linearGradient><linearGradient
+                    id="swatch266"><stop
+                        style="stop-color:#4aa70c;stop-opacity:1;"
+                        offset="0"
+                        id="stop266" /></linearGradient><linearGradient
+                    id="swatch265"><stop
+                        style="stop-color:#3d124a;stop-opacity:1;"
+                        offset="0"
+                        id="stop265" /></linearGradient><linearGradient
+                    id="swatch3"><stop
+                        style="stop-color:#bebe2a;stop-opacity:1;"
+                        offset="0"
+                        id="stop3" /></linearGradient><linearGradient
+                    id="swatch2"><stop
+                        style="stop-color:#ebeb34;stop-opacity:1;"
+                        offset="0"
+                        id="stop2" /></linearGradient><linearGradient
+                    id="swatch1523"><stop
+                        style="stop-color:#ffffff;stop-opacity:1;"
+                        offset="0"
+                        id="stop1523" /></linearGradient><linearGradient
+                    id="swatch1490"><stop
+                        style="stop-color:#ff92e9;stop-opacity:1;"
+                        offset="0"
+                        id="stop1490" /></linearGradient><linearGradient
+                    id="swatch1489"><stop
+                        style="stop-color:#23cf84;stop-opacity:1;"
+                        offset="0"
+                        id="stop1489" /></linearGradient><linearGradient
+                    id="swatch1413"><stop
+                        style="stop-color:#ac794c;stop-opacity:1;"
+                        offset="0"
+                        id="stop1413" /></linearGradient><linearGradient
+                    id="swatch1412"><stop
+                        style="stop-color:#f3f3f3;stop-opacity:1;"
+                        offset="0"
+                        id="stop1412" /></linearGradient><linearGradient
+                    id="swatch948"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.81858408;"
+                        offset="0"
+                        id="stop948" /></linearGradient><linearGradient
+                    id="swatch901"><stop
+                        style="stop-color:#cecece;stop-opacity:1;"
+                        offset="0"
+                        id="stop901" /></linearGradient><linearGradient
+                    id="swatch863"><stop
+                        style="stop-color:#988100;stop-opacity:1;"
+                        offset="0"
+                        id="stop863" /></linearGradient><linearGradient
+                    id="swatch842"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.59292036;"
+                        offset="0"
+                        id="stop842" /></linearGradient><linearGradient
+                    id="swatch841"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.67920351;"
+                        offset="0"
+                        id="stop841" /></linearGradient><linearGradient
+                    id="linearGradient251"><stop
+                        style="stop-color:#974545;stop-opacity:1;"
+                        offset="0"
+                        id="stop250" /></linearGradient><linearGradient
+                    id="swatch53"><stop
+                        style="stop-color:#476dd2;stop-opacity:1;"
+                        offset="0"
+                        id="stop53" /></linearGradient><linearGradient
+                    id="swatch26"><stop
+                        style="stop-color:#977d35;stop-opacity:1;"
+                        offset="0"
+                        id="stop26" /></linearGradient><linearGradient
+                    id="swatch804"><stop
+                        style="stop-color:#b14949;stop-opacity:1;"
+                        offset="0"
+                        id="stop804" /></linearGradient><linearGradient
+                    id="swatch339-6"><stop
+                        style="stop-color:#4b7979;stop-opacity:1;"
+                        offset="0"
+                        id="stop339-8" /></linearGradient><linearGradient
+                    id="swatch266-6"><stop
+                        style="stop-color:#cf235f;stop-opacity:1;"
+                        offset="0"
+                        id="stop266-7" /></linearGradient><linearGradient
+                    id="swatch3-9"><stop
+                        style="stop-color:#1bb1b4;stop-opacity:1;"
+                        offset="0"
+                        id="stop3-0" /></linearGradient><linearGradient
+                    id="swatch2-1"><stop
+                        style="stop-color:#b41819;stop-opacity:1;"
+                        offset="0"
+                        id="stop2-9" /></linearGradient><linearGradient
+                    id="swatch1523-79"><stop
+                        style="stop-color:#814e60;stop-opacity:1;"
+                        offset="0"
+                        id="stop1523-0" /></linearGradient><linearGradient
+                    id="swatch1413-3"><stop
+                        style="stop-color:#794b4b;stop-opacity:1;"
+                        offset="0"
+                        id="stop1413-5" /></linearGradient><linearGradient
+                    id="swatch1412-31"><stop
+                        style="stop-color:#6d19b4;stop-opacity:1;"
+                        offset="0"
+                        id="stop1412-3" /></linearGradient><linearGradient
+                    id="linearGradient65798"><stop
+                        style="stop-color:#adadad;stop-opacity:1;"
+                        offset="0"
+                        id="stop65797" /></linearGradient><linearGradient
+                    id="swatch65668"><stop
+                        style="stop-color:#b02b2b;stop-opacity:1;"
+                        offset="0"
+                        id="stop65668" /></linearGradient><linearGradient
+                    id="swatch65645"><stop
+                        style="stop-color:#e1e1e1;stop-opacity:1;"
+                        offset="0"
+                        id="stop65645" /></linearGradient><linearGradient
+                    id="swatch65641"><stop
+                        style="stop-color:#eeeeee;stop-opacity:1;"
+                        offset="0"
+                        id="stop65641" /></linearGradient><linearGradient
+                    id="swatch65640"><stop
+                        style="stop-color:#222222;stop-opacity:1;"
+                        offset="0"
+                        id="stop65640" /></linearGradient><linearGradient
+                    id="swatch65639"><stop
+                        style="stop-color:#e8e8e8;stop-opacity:1;"
+                        offset="0"
+                        id="stop65639" /></linearGradient><linearGradient
+                    id="swatch85"><stop
+                        style="stop-color:#dfde0a;stop-opacity:1;"
+                        offset="0"
+                        id="stop85" /></linearGradient><linearGradient
+                    id="swatch82"><stop
+                        style="stop-color:#d51e8c;stop-opacity:1;"
+                        offset="0"
+                        id="stop82" /></linearGradient><linearGradient
+                    id="swatch81"><stop
+                        style="stop-color:#2e2e2e;stop-opacity:1;"
+                        offset="0"
+                        id="stop81" /></linearGradient><linearGradient
+                    id="swatch79"><stop
+                        style="stop-color:#292929;stop-opacity:1;"
+                        offset="0"
+                        id="stop79" /></linearGradient><linearGradient
+                    id="swatch68"><stop
+                        style="stop-color:#e0e0e0;stop-opacity:1;"
+                        offset="0"
+                        id="stop68" /></linearGradient></defs><g
+                    id="layer1"
+                    transform="translate(-4012.5577,-502.31359)"><path
+                    d="m 4016.0135,506.59691 v -0.93797 h -3.4557 v -2.40731 h 3.4557 v -0.93805 l 1.8549,1.07085 1.8546,1.07083 -1.8546,1.07082 z"
+                    style="fill-rule:evenodd;stroke:#000000;stroke-width:0;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill markers"
+                    id="path9" /></g>
+                    </svg>
+                `;
+                
+                const template =
+                `
+                    <h1 id="modeName"></h1>
+
+                    <br>
+                    <br>
+
+                    <div class="flex">
+                        ${leftArrowSvg}
+                        <button id="dayOfWeekChangeForEdit" onclick="dayOfWeekChange(true)"></button>
+                        ${rightArrowSvg}
+                    </div>
+
+                    <br>
+                    <br>
+
+                    <div id="content"></div>
+
+                    <br>
+                    <br>
+                    <br>
+
+                    <h1>Transfer data between devices:</h1>
+
+                    <br>
+
+                    <button class="editingButtonContent" style="margin-right:1em" onclick="copyText2ClipBoard(dataSave.read())">Copy saved data</button>
+                    <button class="editingButtonContent" onclick="dataSave.readDataThenInsert()">Upload data</button>
+
+                    <br>
+                    <br>
+                    <br>
+                    <br>
+                    <br>
+
+                    <button  class="editingButtonContent" onclick="how2UseAlert(true)">How to use</button>
+                `;
+                
+                stringVal = template;
+            }
+            else
+            {
+                const leftArrowSvg =
+                `
+                    <svg id="backButton" transform="scale(-1, 1)" onclick="change(-1, 'classOrBusChange')"
+                    width="7.165195mm"
+                    height="4.28333mm"
+                    viewBox="0 0 7.165195 4.28333"
+                    version="1.1"
+                    id="svg1"
+                    xml:space="preserve"
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlns:svg="http://www.w3.org/2000/svg"><defs
+                    id="defs1"><linearGradient
+                    id="swatch37"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop37" /></linearGradient><linearGradient
+                    id="swatch255"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop255" /></linearGradient><linearGradient
+                    id="swatch5374"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop5374" /></linearGradient><linearGradient
+                    id="swatch339"><stop
+                        style="stop-color:#2bffa3;stop-opacity:1;"
+                        offset="0"
+                        id="stop339" /></linearGradient><linearGradient
+                    id="swatch266"><stop
+                        style="stop-color:#4aa70c;stop-opacity:1;"
+                        offset="0"
+                        id="stop266" /></linearGradient><linearGradient
+                    id="swatch265"><stop
+                        style="stop-color:#3d124a;stop-opacity:1;"
+                        offset="0"
+                        id="stop265" /></linearGradient><linearGradient
+                    id="swatch3"><stop
+                        style="stop-color:#bebe2a;stop-opacity:1;"
+                        offset="0"
+                        id="stop3" /></linearGradient><linearGradient
+                    id="swatch2"><stop
+                        style="stop-color:#ebeb34;stop-opacity:1;"
+                        offset="0"
+                        id="stop2" /></linearGradient><linearGradient
+                    id="swatch1523"><stop
+                        style="stop-color:#ffffff;stop-opacity:1;"
+                        offset="0"
+                        id="stop1523" /></linearGradient><linearGradient
+                    id="swatch1490"><stop
+                        style="stop-color:#ff92e9;stop-opacity:1;"
+                        offset="0"
+                        id="stop1490" /></linearGradient><linearGradient
+                    id="swatch1489"><stop
+                        style="stop-color:#23cf84;stop-opacity:1;"
+                        offset="0"
+                        id="stop1489" /></linearGradient><linearGradient
+                    id="swatch1413"><stop
+                        style="stop-color:#ac794c;stop-opacity:1;"
+                        offset="0"
+                        id="stop1413" /></linearGradient><linearGradient
+                    id="swatch1412"><stop
+                        style="stop-color:#f3f3f3;stop-opacity:1;"
+                        offset="0"
+                        id="stop1412" /></linearGradient><linearGradient
+                    id="swatch948"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.81858408;"
+                        offset="0"
+                        id="stop948" /></linearGradient><linearGradient
+                    id="swatch901"><stop
+                        style="stop-color:#cecece;stop-opacity:1;"
+                        offset="0"
+                        id="stop901" /></linearGradient><linearGradient
+                    id="swatch863"><stop
+                        style="stop-color:#988100;stop-opacity:1;"
+                        offset="0"
+                        id="stop863" /></linearGradient><linearGradient
+                    id="swatch842"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.59292036;"
+                        offset="0"
+                        id="stop842" /></linearGradient><linearGradient
+                    id="swatch841"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.67920351;"
+                        offset="0"
+                        id="stop841" /></linearGradient><linearGradient
+                    id="linearGradient251"><stop
+                        style="stop-color:#974545;stop-opacity:1;"
+                        offset="0"
+                        id="stop250" /></linearGradient><linearGradient
+                    id="swatch53"><stop
+                        style="stop-color:#476dd2;stop-opacity:1;"
+                        offset="0"
+                        id="stop53" /></linearGradient><linearGradient
+                    id="swatch26"><stop
+                        style="stop-color:#977d35;stop-opacity:1;"
+                        offset="0"
+                        id="stop26" /></linearGradient><linearGradient
+                    id="swatch804"><stop
+                        style="stop-color:#b14949;stop-opacity:1;"
+                        offset="0"
+                        id="stop804" /></linearGradient><linearGradient
+                    id="swatch339-6"><stop
+                        style="stop-color:#4b7979;stop-opacity:1;"
+                        offset="0"
+                        id="stop339-8" /></linearGradient><linearGradient
+                    id="swatch266-6"><stop
+                        style="stop-color:#cf235f;stop-opacity:1;"
+                        offset="0"
+                        id="stop266-7" /></linearGradient><linearGradient
+                    id="swatch3-9"><stop
+                        style="stop-color:#1bb1b4;stop-opacity:1;"
+                        offset="0"
+                        id="stop3-0" /></linearGradient><linearGradient
+                    id="swatch2-1"><stop
+                        style="stop-color:#b41819;stop-opacity:1;"
+                        offset="0"
+                        id="stop2-9" /></linearGradient><linearGradient
+                    id="swatch1523-79"><stop
+                        style="stop-color:#814e60;stop-opacity:1;"
+                        offset="0"
+                        id="stop1523-0" /></linearGradient><linearGradient
+                    id="swatch1413-3"><stop
+                        style="stop-color:#794b4b;stop-opacity:1;"
+                        offset="0"
+                        id="stop1413-5" /></linearGradient><linearGradient
+                    id="swatch1412-31"><stop
+                        style="stop-color:#6d19b4;stop-opacity:1;"
+                        offset="0"
+                        id="stop1412-3" /></linearGradient><linearGradient
+                    id="linearGradient65798"><stop
+                        style="stop-color:#adadad;stop-opacity:1;"
+                        offset="0"
+                        id="stop65797" /></linearGradient><linearGradient
+                    id="swatch65668"><stop
+                        style="stop-color:#b02b2b;stop-opacity:1;"
+                        offset="0"
+                        id="stop65668" /></linearGradient><linearGradient
+                    id="swatch65645"><stop
+                        style="stop-color:#e1e1e1;stop-opacity:1;"
+                        offset="0"
+                        id="stop65645" /></linearGradient><linearGradient
+                    id="swatch65641"><stop
+                        style="stop-color:#eeeeee;stop-opacity:1;"
+                        offset="0"
+                        id="stop65641" /></linearGradient><linearGradient
+                    id="swatch65640"><stop
+                        style="stop-color:#222222;stop-opacity:1;"
+                        offset="0"
+                        id="stop65640" /></linearGradient><linearGradient
+                    id="swatch65639"><stop
+                        style="stop-color:#e8e8e8;stop-opacity:1;"
+                        offset="0"
+                        id="stop65639" /></linearGradient><linearGradient
+                    id="swatch85"><stop
+                        style="stop-color:#dfde0a;stop-opacity:1;"
+                        offset="0"
+                        id="stop85" /></linearGradient><linearGradient
+                    id="swatch82"><stop
+                        style="stop-color:#d51e8c;stop-opacity:1;"
+                        offset="0"
+                        id="stop82" /></linearGradient><linearGradient
+                    id="swatch81"><stop
+                        style="stop-color:#2e2e2e;stop-opacity:1;"
+                        offset="0"
+                        id="stop81" /></linearGradient><linearGradient
+                    id="swatch79"><stop
+                        style="stop-color:#292929;stop-opacity:1;"
+                        offset="0"
+                        id="stop79" /></linearGradient><linearGradient
+                    id="swatch68"><stop
+                        style="stop-color:#e0e0e0;stop-opacity:1;"
+                        offset="0"
+                        id="stop68" /></linearGradient></defs><g
+                    id="layer1"
+                    transform="translate(-4012.5577,-502.31359)"><path
+                    d="m 4016.0135,506.59691 v -0.93797 h -3.4557 v -2.40731 h 3.4557 v -0.93805 l 1.8549,1.07085 1.8546,1.07083 -1.8546,1.07082 z"
+                    style="fill-rule:evenodd;stroke:#000000;stroke-width:0;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill markers"
+                    id="path9" /></g>
+                    </svg>
+                `;
+                
+                const rightArrowSvg =
+                `
+                    <svg id="nextButton" onclick="change(1, 'classOrBusChange')"
+                    width="7.165195mm"
+                    height="4.28333mm"
+                    viewBox="0 0 7.165195 4.28333"
+                    version="1.1"
+                    id="svg1"
+                    xml:space="preserve"
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlns:svg="http://www.w3.org/2000/svg"><defs
+                    id="defs1"><linearGradient
+                    id="swatch37"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop37" /></linearGradient><linearGradient
+                    id="swatch255"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop255" /></linearGradient><linearGradient
+                    id="swatch5374"><stop
+                        style="stop-color:#000000;stop-opacity:1;"
+                        offset="0"
+                        id="stop5374" /></linearGradient><linearGradient
+                    id="swatch339"><stop
+                        style="stop-color:#2bffa3;stop-opacity:1;"
+                        offset="0"
+                        id="stop339" /></linearGradient><linearGradient
+                    id="swatch266"><stop
+                        style="stop-color:#4aa70c;stop-opacity:1;"
+                        offset="0"
+                        id="stop266" /></linearGradient><linearGradient
+                    id="swatch265"><stop
+                        style="stop-color:#3d124a;stop-opacity:1;"
+                        offset="0"
+                        id="stop265" /></linearGradient><linearGradient
+                    id="swatch3"><stop
+                        style="stop-color:#bebe2a;stop-opacity:1;"
+                        offset="0"
+                        id="stop3" /></linearGradient><linearGradient
+                    id="swatch2"><stop
+                        style="stop-color:#ebeb34;stop-opacity:1;"
+                        offset="0"
+                        id="stop2" /></linearGradient><linearGradient
+                    id="swatch1523"><stop
+                        style="stop-color:#ffffff;stop-opacity:1;"
+                        offset="0"
+                        id="stop1523" /></linearGradient><linearGradient
+                    id="swatch1490"><stop
+                        style="stop-color:#ff92e9;stop-opacity:1;"
+                        offset="0"
+                        id="stop1490" /></linearGradient><linearGradient
+                    id="swatch1489"><stop
+                        style="stop-color:#23cf84;stop-opacity:1;"
+                        offset="0"
+                        id="stop1489" /></linearGradient><linearGradient
+                    id="swatch1413"><stop
+                        style="stop-color:#ac794c;stop-opacity:1;"
+                        offset="0"
+                        id="stop1413" /></linearGradient><linearGradient
+                    id="swatch1412"><stop
+                        style="stop-color:#f3f3f3;stop-opacity:1;"
+                        offset="0"
+                        id="stop1412" /></linearGradient><linearGradient
+                    id="swatch948"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.81858408;"
+                        offset="0"
+                        id="stop948" /></linearGradient><linearGradient
+                    id="swatch901"><stop
+                        style="stop-color:#cecece;stop-opacity:1;"
+                        offset="0"
+                        id="stop901" /></linearGradient><linearGradient
+                    id="swatch863"><stop
+                        style="stop-color:#988100;stop-opacity:1;"
+                        offset="0"
+                        id="stop863" /></linearGradient><linearGradient
+                    id="swatch842"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.59292036;"
+                        offset="0"
+                        id="stop842" /></linearGradient><linearGradient
+                    id="swatch841"><stop
+                        style="stop-color:#ffffff;stop-opacity:0.67920351;"
+                        offset="0"
+                        id="stop841" /></linearGradient><linearGradient
+                    id="linearGradient251"><stop
+                        style="stop-color:#974545;stop-opacity:1;"
+                        offset="0"
+                        id="stop250" /></linearGradient><linearGradient
+                    id="swatch53"><stop
+                        style="stop-color:#476dd2;stop-opacity:1;"
+                        offset="0"
+                        id="stop53" /></linearGradient><linearGradient
+                    id="swatch26"><stop
+                        style="stop-color:#977d35;stop-opacity:1;"
+                        offset="0"
+                        id="stop26" /></linearGradient><linearGradient
+                    id="swatch804"><stop
+                        style="stop-color:#b14949;stop-opacity:1;"
+                        offset="0"
+                        id="stop804" /></linearGradient><linearGradient
+                    id="swatch339-6"><stop
+                        style="stop-color:#4b7979;stop-opacity:1;"
+                        offset="0"
+                        id="stop339-8" /></linearGradient><linearGradient
+                    id="swatch266-6"><stop
+                        style="stop-color:#cf235f;stop-opacity:1;"
+                        offset="0"
+                        id="stop266-7" /></linearGradient><linearGradient
+                    id="swatch3-9"><stop
+                        style="stop-color:#1bb1b4;stop-opacity:1;"
+                        offset="0"
+                        id="stop3-0" /></linearGradient><linearGradient
+                    id="swatch2-1"><stop
+                        style="stop-color:#b41819;stop-opacity:1;"
+                        offset="0"
+                        id="stop2-9" /></linearGradient><linearGradient
+                    id="swatch1523-79"><stop
+                        style="stop-color:#814e60;stop-opacity:1;"
+                        offset="0"
+                        id="stop1523-0" /></linearGradient><linearGradient
+                    id="swatch1413-3"><stop
+                        style="stop-color:#794b4b;stop-opacity:1;"
+                        offset="0"
+                        id="stop1413-5" /></linearGradient><linearGradient
+                    id="swatch1412-31"><stop
+                        style="stop-color:#6d19b4;stop-opacity:1;"
+                        offset="0"
+                        id="stop1412-3" /></linearGradient><linearGradient
+                    id="linearGradient65798"><stop
+                        style="stop-color:#adadad;stop-opacity:1;"
+                        offset="0"
+                        id="stop65797" /></linearGradient><linearGradient
+                    id="swatch65668"><stop
+                        style="stop-color:#b02b2b;stop-opacity:1;"
+                        offset="0"
+                        id="stop65668" /></linearGradient><linearGradient
+                    id="swatch65645"><stop
+                        style="stop-color:#e1e1e1;stop-opacity:1;"
+                        offset="0"
+                        id="stop65645" /></linearGradient><linearGradient
+                    id="swatch65641"><stop
+                        style="stop-color:#eeeeee;stop-opacity:1;"
+                        offset="0"
+                        id="stop65641" /></linearGradient><linearGradient
+                    id="swatch65640"><stop
+                        style="stop-color:#222222;stop-opacity:1;"
+                        offset="0"
+                        id="stop65640" /></linearGradient><linearGradient
+                    id="swatch65639"><stop
+                        style="stop-color:#e8e8e8;stop-opacity:1;"
+                        offset="0"
+                        id="stop65639" /></linearGradient><linearGradient
+                    id="swatch85"><stop
+                        style="stop-color:#dfde0a;stop-opacity:1;"
+                        offset="0"
+                        id="stop85" /></linearGradient><linearGradient
+                    id="swatch82"><stop
+                        style="stop-color:#d51e8c;stop-opacity:1;"
+                        offset="0"
+                        id="stop82" /></linearGradient><linearGradient
+                    id="swatch81"><stop
+                        style="stop-color:#2e2e2e;stop-opacity:1;"
+                        offset="0"
+                        id="stop81" /></linearGradient><linearGradient
+                    id="swatch79"><stop
+                        style="stop-color:#292929;stop-opacity:1;"
+                        offset="0"
+                        id="stop79" /></linearGradient><linearGradient
+                    id="swatch68"><stop
+                        style="stop-color:#e0e0e0;stop-opacity:1;"
+                        offset="0"
+                        id="stop68" /></linearGradient></defs><g
+                    id="layer1"
+                    transform="translate(-4012.5577,-502.31359)"><path
+                    d="m 4016.0135,506.59691 v -0.93797 h -3.4557 v -2.40731 h 3.4557 v -0.93805 l 1.8549,1.07085 1.8546,1.07083 -1.8546,1.07082 z"
+                    style="fill-rule:evenodd;stroke:#000000;stroke-width:0;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill markers"
+                    id="path9" /></g>
+                    </svg>
+                `;
+                
+                let template = "";
+                
+                if(dataSave.switchVal === "class" && showing.haveAnyClass)
+                {
+                    template =
+                    `
+                        <div id="timer">
+                            <span id="currentTime" onclick="change(null, 'current timer')"></span>
+                            <span id="timeLeftTilTimer" class="smallerTimer" onclick="change(null, 'smaller timer text')"></span>
+                            <span class="smallerTimer" onclick="change(null, 'smaller timer text')" id="smallerTimerText"></span>
+                        </div>
+
+                        <hr>
+                        
+                        <p id="classBusStatus"></p>
+
+                        <hr>
+
+                        <div id="adjustButton">
+                            ${leftArrowSvg}
+                            <span id="adjustText"></span>
+                            ${rightArrowSvg}
+                        </div>
+
+                        <div id="content"></div>
+
+                        <div class="flex">
+                            <p id="tellWhenNext"></p>
+                        </div>
+                    `;
+                    
+                }
+                else if(dataSave.switchVal === "bus" && showing.haveAnyBus)
+                {
+                    
+                }
+                else //if dataSave.switchVal is equal to class but have no class at all, same with bus
+                {
+                    template =
+                    `
+                        <p id="noClassBusText">Currently having no ${dataSave.switchVal} at all. Please click the "EDIT" button to add new ${dataSave.switchVal}</p>
+                    `;
+                }
+                
+                stringVal = template;
+            }
+            
+            stringVal +=
+            `
+                <div class="classBusSwitch" id="editSwitch" onclick="editSwitch()">EDIT</div>
+
+                <div class="classBusSwitch" onclick="change(null, 'mode')" id="modeSwitch"></div>
+
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <div></div>
+            `;
+            
+            return stringVal;
+        }
+        
+        function findShowingNumAndIndex()
+        {
+            let dayNumHolder = NaN;
+            let dayIndexHolder = NaN;
+            
+            if(showing.haveAnyClass)
+            {
+                if(dataSave.classList[time.dayOfWeek].length === 0) //have no class today
+                {
+                    dayNumHolder = time.dayOfWeekNext;
+                    dayIndexHolder = time.nextBusOrClassIndex;
+                    
+                    showing.tellWhenNextText = `The next class is in ${dayNum2Name(dayNumHolder)}, here is its ${num2OrdinalNum(dayIndexHolder + showing.classBusOffSetTracker + 1)} class`;
+                }
+                else //have class today
+                {
+                    // (time.currentBusOrClassIndexToday === -1 && time.dayOfWeekNext !== time.dayOfWeek) ====>
+                    // meant there is no class or bus rn and the next class or bus is not today ==>
+                    // meaning the user had finished the last class or bus for today
+                    
+                    //if have class today and have class tomorrow
+                    if(dataSave.classList[dayResetWhenOverFlow(time.dayOfWeek + 1)].length !== 0 && (time.currentBusOrClassIndexToday === -1 && time.dayOfWeekNext !== time.dayOfWeek))
+                    {
+                        let textHightingColor = "";
+                        
+                        if(dataSave.showTodayOrTomorrow === "today")
+                        {
+                            dayNumHolder = time.dayOfWeek;
+                            dayIndexHolder = dataSave.classList[time.dayOfWeek].length - 1;
+                            textHightingColor = "#ffff5e"; //light yellow ish
+                        }
+                        else if(dataSave.showTodayOrTomorrow === "tomorrow")
+                        {
+                            dayNumHolder = time.dayOfWeekNext;
+                            dayIndexHolder = 0;
+                            textHightingColor = "#83f383"; //light green ish
+                        }
+                        
+                        showing.tellWhenNextText = "<div>Today last class had end, the next class is tomorrow. Currently showing:</div>";
+                        showing.tellWhenNextText += `<span style="background-color: ${textHightingColor}">${dataSave.showTodayOrTomorrow}'s class</span>`;
+                    }
+                    //if the last class had not end yet or tomorrow have no class
+                    //also for class change, change for having class to having no class, and the opposite
+                    else if(!(time.currentBusOrClassIndexToday === -1 && time.dayOfWeekNext !== time.dayOfWeek) || dataSave.classList[dayResetWhenOverFlow(time.dayOfWeek + 1)].length === 0)// last class still not end
+                    { //ngl, i still dunno wut going lol
+                        dayNumHolder = time.dayOfWeek;
+                        
+                        if(time.currentBusOrClassIndexToday !== -1) //have class
+                        {
+                            dayIndexHolder = time.currentBusOrClassIndexToday;
+                        }
+                        else if(time.currentBusOrClassIndexToday === -1) //don't have class
+                        {
+                            dayIndexHolder = time.nextBusOrClassIndex;
+                        }
+                        
+                        showing.tellWhenNextText = "";
+                    }
+                }
+                
+                if(dayNumHolder !== showing.showingDayNum || dayIndexHolder !== showing.showingIndex)
+                {
+                    showing.classBusOffSetTracker = 0;
+                }
+                
+                showing.showingDayNum = dayNumHolder;
+                showing.showingIndex = dayIndexHolder;
+            }
+        }
+        
+        function change(val, changeWhich)
+        {
+            switch(changeWhich)
+            {
+                case "current timer":
+                if(dataSave.clockType === "12h")
+                {
+                    dataSave.clockType = "24h";
+                }
+                else if(dataSave.clockType === "24h")
+                {
+                    dataSave.clockType = "12h";
+                }
+                
+                dataSave.push("clockType");
+                
+                loadContent = true;
+                
+                break;
+                
+                case "mode":
+                if(dataSave.switchVal === "class")
+                {
+                    dataSave.switchVal = "bus";
+                }
+                else if(dataSave.switchVal === "bus")
+                {
+                    dataSave.switchVal = "class";
+                }
+                
+                dataSave.push("switchVal");
+                
+                loadContent = true;
+                changeMode = true;
+                
+                break;
+                
+                case "smaller timer text":
+                if(dataSave.timeTilType === "next")
+                {
+                    dataSave.timeTilType = "end";
+                }
+                else if(dataSave.timeTilType === "end")
+                {
+                    dataSave.timeTilType = "next";
+                }
+                
+                dataSave.push("timeTilType");
+                
+                break;
+                
+                case "classOrBusChange":
+                if(dataSave.switchVal === "class")
+                {
+                    if((showing.classBusOffSetTracker + showing.showingIndex) !== 0 && val === -1)
+                    {
+                        showing.classBusOffSetTracker += val;
+                        loadContent = true;
+                    }
+                    else if((showing.classBusOffSetTracker + showing.showingIndex) !== dataSave.classList[showing.showingDayNum].length - 1 && val === 1)
+                    {
+                        showing.classBusOffSetTracker += val;
+                        loadContent = true;
+                    }
+                }
+                else if(dataSave.switchVal === "bus")
+                {
+                    
+                }
+                
+                break;
+                
+                case "classOrBusChangeEdit":
+                if(edit.classBusIndexTracker > 0 && val === -1)
+                {
+                    edit.classBusIndexTracker += val;
+                    loadContent = true;
+                }
+                else if((edit.classBusIndexTracker < (dataSave.classList[edit.dayOfWeekTracker].length - 1)) && val === 1)
+                {
+                    edit.classBusIndexTracker += val;
+                    loadContent = true;
+                }
+                
+                break;
+                
+                case "today and tomorrow switch":
+                if(dataSave.showTodayOrTomorrow === "today")
+                {
+                    dataSave.showTodayOrTomorrow = "tomorrow";
+                }
+                else if(dataSave.showTodayOrTomorrow === "tomorrow")
+                {
+                    dataSave.showTodayOrTomorrow = "today";
+                }
+                
+                dataSave.push("showTodayOrTomorrow");
+                
+                loadContent = true;
+                
+                break;
+                
+                default:
+                return;
+            }
+        }
+        
+        function editSwitch()
+        {
+            edit.modeOnCheck = !edit.modeOnCheck;
+            
+            changeMode = true;
+            showing.classBusOffSetTracker = 0;
+            loadContent = true;
+        }
+        
+        function dayResetWhenOverFlow(day)
+        {
+            return numRotate(day, 0, 6);
+        }
+        
+        function insertClassInRightPositionCheck(timeStart, timeEnd, updateOrAdd) //compare the time start between class
+        {
+            const startTimeList = [];
+            const endTimeList = [];
+            
+            const currentClassList = dataSave.classList[edit.dayOfWeekTracker];
+            
+            for(let i = 0; i < currentClassList.length; i++)
+            {
+                startTimeList[i] = timeString2Num(currentClassList[i].timeStart);
+                endTimeList[i] = timeString2Num(currentClassList[i].timeEnd);
+            }
+            
+            if(updateOrAdd === "update")
+            {
+                const checkingStartArray = startTimeList.toSpliced(edit.classBusIndexTracker, 1);
+                const checkingEndArray = endTimeList.toSpliced(edit.classBusIndexTracker, 1);
+
+                const insertingIndex = giveInsertingIndexInAscendingList(timeStart, checkingStartArray);
+
+                if(timeEnd <= checkingEndArray[insertingIndex] || insertingIndex === checkingStartArray.length)
+                {
+                    return insertingIndex;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+            else if(updateOrAdd === "add")
+            {
+                const insertingIndex = giveInsertingIndexInAscendingList(timeStart, startTimeList);
+                
+                if(timeEnd <= endTimeList[insertingIndex] || insertingIndex === startTimeList.length)
+                {
+                    return insertingIndex;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+        }
+        
+        function updateEditClassOrBus()
+        {
+            if(window.confirm("Do you want to update this class?") === true)
+            {
+                if(dataSave.switchVal === "class")
+                {
+                    const timeStartRef = document.getElementById("timeStart");
+                    const timeEndRef = document.getElementById("timeEnd");
+                    
+                    //not including the second cuz... yes
+                    const timeStartNumVal = timeString2Num(timeStartRef.value);
+                    const timeEndNumVal = timeString2Num(timeEndRef.value);
+
+                    const insertIndex = insertClassInRightPositionCheck(timeStartNumVal, timeEndNumVal, "update");
+                    
+                    if(timeStartNumVal < timeEndNumVal && timeStartRef.value !== "" && timeEndRef.value !== "" && insertIndex !== -1)
+                    {
+                        dataSave.classList[edit.dayOfWeekTracker].splice(edit.classBusIndexTracker, 1);
+
+                        const propertyList = ["name", "code", "teacher", "email", "phone", "timeStart", "timeEnd", "location"];
+                        const insertingObj = {};
+
+                        for(let i = 0; i < propertyList.length; i++)
+                        {
+                            if(propertyList[i] === "timeStart" || propertyList[i] === "timeEnd")
+                            {
+                                insertingObj[`${propertyList[i]}`] = `${document.getElementById(`${propertyList[i]}`).value}:00`;
+                            }
+                            else
+                            {
+                                insertingObj[`${propertyList[i]}`] = document.getElementById(`${propertyList[i]}`).value;
+                            }
+                        }
+
+                        dataSave.classList[edit.dayOfWeekTracker].splice(insertIndex, 0, insertingObj);
+                        
+                        dataSave.push("classList");
+
+                        edit.classBusIndexTracker = insertIndex;
+                    }
+                    else
+                    {
+                        if(timeStartRef.value === "" && timeEndRef.value === "")
+                        {
+                            window.alert("Make sure to input the starting time and ending time.");
+                        }
+                        else if(timeStartRef.value === "")
+                        {
+                            window.alert("Make sure to input the starting time.");
+                        }
+                        else if(timeEndRef.value === "")
+                        {
+                            window.alert("Make sure to input the ending time.");
+                        }
+                        else if(timeStartNumVal >= timeEndNumVal)
+                        {
+                            window.alert("Make sure that the time that the class end is larger than time it start.");
+                        }
+                        else if(insertIndex === -1)
+                        {
+                            window.alert("Make sure the ending time of this class is not after the starting time of another class");
+                        }
+                    }
+                }
+                else if(dataSave.switchVal === "bus")
+                {
+                    
+                }
+            }
+
+            loadContent = true;
+        }
+        
+        function addNewClassOrBus()
+        {
+            if(dataSave.switchVal === "class")
+            {
+                const timeStartRef = document.getElementById("timeStart");
+                const timeEndRef = document.getElementById("timeEnd");
+                
+                //not including the second cuz... yes
+                const timeStartNumVal = timeString2Num(timeStartRef.value);
+                const timeEndNumVal = timeString2Num(timeEndRef.value);
+
+                let insertIndex = NaN;
+
+                if(dataSave.classList[edit.dayOfWeekTracker].length !== 0)
+                {
+                    insertIndex = insertClassInRightPositionCheck(timeStartNumVal, timeEndNumVal, "add");
+                }
+                else
+                {
+                    insertIndex = 0;
+                }
+                
+                if(timeStartNumVal < timeEndNumVal && timeStartRef.value !== "" && timeEndRef.value !== "" && insertIndex !== -1)
+                {
+                    const propertyList = ["name", "code", "teacher", "email", "phone", "timeStart", "timeEnd", "location"];
+                    const insertingObj = {};
+
+                    for(let i = 0; i < propertyList.length; i++)
+                    {
+                        if(propertyList[i] === "timeStart" || propertyList[i] === "timeEnd")
+                        {
+                            insertingObj[`${propertyList[i]}`] = `${document.getElementById(`${propertyList[i]}`).value}:00`;
+                        }
+                        else
+                        {
+                            insertingObj[`${propertyList[i]}`] = document.getElementById(`${propertyList[i]}`).value;
+                        }
+                    }
+
+                    dataSave.classList[edit.dayOfWeekTracker].splice(insertIndex, 0, insertingObj);
+                    
+                    dataSave.push("classList");
+
+                    edit.classBusIndexTracker = insertIndex;
+
+                    edit.addNewMode = false;
+
+                    loadContent = true;
+                }
+                else
+                {
+                    if(timeStartRef.value === "" && timeEndRef.value === "")
+                    {
+                        window.alert("Make sure to input the starting time and ending time.");
+                    }
+                    else if(timeStartRef.value === "")
+                    {
+                        window.alert("Make sure to input the starting time.");
+                    }
+                    else if(timeEndRef.value === "")
+                    {
+                        window.alert("Make sure to input the ending time.");
+                    }
+                    else if(timeStartNumVal >= timeEndNumVal)
+                    {
+                        window.alert("Make sure that the time that the class end is larger than time it start.");
+                    }
+                    else if(insertIndex === -1)
+                    {
+                        window.alert("Make sure the ending time of this class is not after the starting time of another class");
+                    }
+                }
+            }
+            else if(dataSave.switchVal === "bus")
+            {
+                
+            }
+        }
+
+        function deleteClassOrBus()
+        {
+            if(window.confirm("Delete this class?"))
+            {
+                //if last class got deleted, then show the next to last class before it was deleted
+                if(edit.classBusIndexTracker === dataSave.classList[edit.dayOfWeekTracker].length - 1)
+                {
+                    edit.classBusIndexTracker--;
+                }//else keep it as the same val to some the next class of the current one,
+                // after the current one is deleted
+                
+                dataSave.classList[edit.dayOfWeekTracker].splice(edit.classBusIndexTracker, 1);
+
+                dataSave.push("classList");
+                
+                loadContent = true;
+            }
+        }
+
+        function how2UseAlert(restartPageCheck)
+        {
+            if(restartPageCheck)
+            {
+                dataSave.how2UseShown = false;
+
+                dataSave.push("how2UseShown");
+
+                location.reload();
+            }
+            else
+            {
+                window.alert
+            (
+                `
+***    IMPORTANT    ***    IMPORTANT    ***    IMPORTANT    ***    
+
+
+First of all,
+You can see this again by going to Edit mode, which is access via pressing the "Edit" button at the bottom left corner.
+Then, scroll way down and press the "How to use" button.
+
+
+Press "OK" to continue.
+`
+            );
+            
+            window.alert
+            (
+                `
+How to use this app?
+
+
+Click on the big timer on the top to switch between 12h clock and 24h clock.
+
+Click on the small text just under the big timer to switch between telling when is the next class come and when is the current class end.
+
+You can click on the arrow button to navigate around the classes.
+
+After the end of the day, there would be a text at the bottom that you can press to switch between showing today class or tomorrow class. The text should have yellow highlight for showing today class and green highlight for tomorrow class.
+
+You can tap on the Edit button to add, update, and delete class. You can also transfer class data using this button.
+
+
+Press "OK" to continue.
+`
+            );
+
+            window.alert
+            (
+                `
+How to use the Edit tab?
+
+
+Click on the Edit button again to go back.
+
+Click on the button in the top middle of the screen, that should say "Sunday", to rotate around the days of the week.
+
+Click on "Add new class" to add new class. It should then have a bunch of options show up. Tap on each input box to insert the needed information. Then, click "Add class" to add the class. Otherwise, click "Cancle" if you don't want to.
+
+After you added a class, you can update each class by changing directly inside the input box and press "Update class".
+
+You can also delete the current viewing class by pressing "Delete".
+
+You can navigate between classes by pressing the arrow button on top.
+
+
+Press "OK" to continue.
+`
+            );
+
+            window.alert
+            (
+                `
+For transfering class data across device, press "Copy saved data". All the stored data should be save in your clipboard. You can then go to the new device that you want to move the datas to, go in Edit mode, then press "Upload data". There should then be an input box pop up, and you can then paste the data in there and press "Ok" to finish. Try refreshing the page if nothing changed.
+
+
+Press "OK" to finish.
+`
+            );
+            }
+
+            
+        }
+        
+        
+        //non-project-specific functional function(can be used in another program) and conversion function
+        
+        function insertZeroForSingleDigit(num)
+        {
+            let result = `${num}`;
+            
+            if(num <= 9)
+            {
+                result = "0" + result;
+            }
+            
+            return result;
+        }
+        
+        function numRotate(inputVal, lowestVal, highestVal)
+        {
+            if(inputVal > highestVal)
+            {
+                inputVal = lowestVal;
+            }
+            else if(inputVal < lowestVal)
+            {
+                inputVal = highestVal;
+            }
+            
+            return inputVal;
+        }
+        
+        function convertTo12hClock(hour, min)
+        {
+            if(hour === 12) // smt like 12:30 or at exactly 12:00
+            {
+                return `${insertZeroForSingleDigit(hour)}:${insertZeroForSingleDigit(min)} PM`;
+            }
+            else if(hour > 12) // for like 13:00
+            {
+                return `${insertZeroForSingleDigit(hour - 12)}:${insertZeroForSingleDigit(min)} PM`;
+            }
+            else if(hour === 0) // at exactly 00:00 or 00:30
+            {
+                return `12:${insertZeroForSingleDigit(min)} AM`;
+            }
+            else if(hour < 12) // for 05:00
+            {
+                return `${insertZeroForSingleDigit(hour)}:${insertZeroForSingleDigit(min)} AM`;
+            }
+        }
+        
+        function time2mili(timeString)
+        {
+            //input speciment: "1d, 5h, 29m, 23s"
+            
+            let miliVal = 0;
+            let stringHolder = "";
+            
+            const oneSec = 1000;
+            const oneMin = 1000 * 60;
+            const oneHour = 1000 * 60 * 60;
+            const oneDay = 1000 * 60 * 60 * 24;
+            
+            while(timeString !== "")
+            {
+                if(timeString.indexOf(", ") !== -1)
+                {
+                    stringHolder = timeString.slice(0, timeString.indexOf(","));
+                    timeString = timeString.slice(timeString.indexOf(" ") + 1);
+                }
+                else
+                {
+                    stringHolder = timeString;
+                    timeString = "";
+                }
+                
+                const amount = Number(stringHolder.slice(0, stringHolder.length - 1));
+                
+                switch(stringHolder[stringHolder.length - 1])
+                {
+                    case "s":
+                    miliVal += amount * oneSec;
+                    break;
+                    
+                    case "m":
+                    miliVal += amount * oneMin;
+                    break;
+                    
+                    case "h":
+                    miliVal += amount * oneHour;
+                    break;
+                    
+                    case "d":
+                    miliVal += amount * oneDay;
+                    break;
+                    
+                    default:
+                    return;
+                }
+            }
+            
+            return miliVal;
+        }
+        
+        function getTime(miliVal, output, roundOrFloor)
+        {
+            const dayConversion = 24 * 60 * 60 * 1000;
+            const hourConversion = 60 * 60 * 1000;
+            const minConversion = 60 * 1000;
+            const secConversion = 1000;
+
+            let resultTime = 0;
+
+            const roundOrFloorVal = (val, roundOrFloorCheck) =>
+            {
+                if(roundOrFloorCheck === "round")
+                {
+                    val = Math.round(val);
+                }
+                else if(roundOrFloorCheck === "floor")
+                {
+                    val = Math.floor(val);
+                }
+
+                return val;
+            };
+            
+            if(output === "d")
+            {
+                const day = miliVal / (dayConversion);
+
+                resultTime = day;
+
+                resultTime = roundOrFloorVal(resultTime, roundOrFloor);
+                
+                return resultTime;
+            }
+            else if(output === "h")
+            {
+                const day = dayConversion * Math.floor(miliVal / dayConversion);
+                const hour = (miliVal - day) / hourConversion;
+
+                resultTime = hour;
+                
+                resultTime = roundOrFloorVal(resultTime, roundOrFloor);
+                
+                return resultTime;
+            }
+            else if(output === "m")
+            {
+                const day = dayConversion * Math.floor(miliVal / dayConversion);
+                const hour = hourConversion * Math.floor((miliVal - day) / hourConversion);
+                const min = (miliVal - day - hour) / minConversion;
+
+                resultTime = min;
+                
+                resultTime = roundOrFloorVal(resultTime, roundOrFloor);
+                
+                return resultTime;
+            }
+            else if(output === "s")
+            {
+                const day = dayConversion * Math.floor(miliVal / dayConversion);
+                const hour = hourConversion * Math.floor((miliVal - day) / hourConversion);
+                const min = minConversion * Math.floor((miliVal - day - hour) / minConversion);
+                const sec = (miliVal - day - hour - min) / secConversion;
+
+                resultTime = sec;
+                
+                resultTime = roundOrFloorVal(resultTime, roundOrFloor);
+                
+                return resultTime;
+            }
+        }
+        
+        function dayNum2Name(num)
+        {
+            switch(num)
+            {
+                case 0:
+                return "Sunday";
+                case 1:
+                return "Monday";
+                case 2:
+                return "Tuesday";
+                case 3:
+                return "Wednesday";
+                case 4:
+                return "Thursday";
+                case 5:
+                return "Friday";
+                case 6:
+                return "Saturday";
+                default:
+                return "";
+            }
+        }
+        
+        function num2OrdinalNum(num)
+        {
+            num = `${Math.abs(Math.trunc(num))}`;
+            
+            if(num[num.length - 1] === "1")
+            {
+                num += "st";
+            }
+            else if(num[num.length - 1] === "2")
+            {
+                num += "nd";
+            }
+            else if(num[num.length - 1] === "3")
+            {
+                num += "rd";
+            }
+            else
+            {
+                num += "th";
+            }
+            
+            return num;
+        }
+        
+        function timeString2Num(timeString) //just used to replace the ":", in 02:30, with "." for easiser time
+        {                           //comparation if containing second then just have the second's number go
+        //after the min's 2 number
+        if(timeString !== "")
+        {
+            if(timeString.match(/:/g).length === 1)
+            {
+                timeString = Number(timeString.replace(":", "."));
+            }
+            else if(timeString.match(/:/g).length === 2)
+            {
+                timeString = Number(timeString.replace(":", ".").replace(":", ""));
+            }
+        }
+        
+        return timeString;
+    }
+    
+        function giveInsertingIndexInAscendingList(val, list)
+        {
+            list = [...list];
+            
+            let indexTracker = NaN;
+            
+            for(let i = 0; i < list.length; i++)
+            {
+                indexTracker = i;
+                
+                if(list[i] > val)
+                {
+                    return indexTracker;
+                }
+            }
+
+            return indexTracker + 1;
+        }
+
+        function copyText2ClipBoard(text)
+        {
+            const elementSoon2BeDelete = document.createElement("textarea");
+
+            elementSoon2BeDelete.value = text;
+
+            document.body.appendChild(elementSoon2BeDelete);
+
+            elementSoon2BeDelete.select();
+
+            document.execCommand('copy');
+
+            document.body.removeChild(elementSoon2BeDelete);
+
+            alert("Copied.");
+        }
+    
+    
+        // loading showing element function, must have the needed HTML to function
+    
+        function loadContentWhenNotEdit()
+        {
+            const content_element = document.getElementById("content");
+            let stringContent = "";
+            
+            
+            if(dataSave.switchVal === "class")
+            {
+                const currentClass = dataSave.classList[showing.showingDayNum][showing.showingIndex + showing.classBusOffSetTracker];
+                
+                stringContent += "<ul>";
+                    
+                stringContent += `<li><strong>Class name:</strong> ${currentClass.name}</li>`;
+                stringContent += `<li><strong>Class code:</strong> ${currentClass.code}</li>`;
+                stringContent += `<li><strong>Teacher:</strong> ${currentClass.teacher}</li>`;
+                stringContent += `<li><strong>Teacher's email:</strong> ${currentClass.email}</li>`;
+                stringContent += `<li><strong>Teacher's phone number:</strong> ${currentClass.phone}</li>`;
+                
+                if(dataSave.clockType === "24h")
+                {
+                    stringContent += `<li><strong>Time start:</strong> ${currentClass.timeStart.slice(0, -3)}</li>`; //the -3 is for cutting out the second
+                    stringContent += `<li><strong>Time end:</strong> ${currentClass.timeEnd.slice(0, -3)}</li>`; //the -3 is for cutting out the second
+                }
+                else if(dataSave.clockType === "12h")
+                {
+                    //format: "10:05:59"
+                    const timeStart = currentClass.timeStart;
+                    const timeEnd = currentClass.timeEnd;
+                    
+                    const timeStartHour = Number(timeStart[0] + timeStart[1]);
+                    const timeStartMin = Number(timeStart[3] + timeStart[4]);
+                    const timeEndHour = Number(timeEnd[0] + timeEnd[1]);
+                    const timeEndMin = Number(timeEnd[3] + timeEnd[4]);
+                    
+                    stringContent += `<li><strong>Time start:</strong> ${convertTo12hClock(timeStartHour, timeStartMin)}</li>`;
+                    stringContent += `<li><strong>Time end:</strong> ${convertTo12hClock(timeEndHour, timeEndMin)}</li>`;
+                }
+                
+                stringContent += `<li><strong>Location:</strong> ${currentClass.location}</li>`;
+                
+                stringContent += "</ul>";
+            }
+            else if(dataSave.switchVal === "bus")
+            {
+                //show all the bus options in one box and clicking on the box can will show the next bus stop
+                //and have a button to go back to the last bus stop
+                
+                //have option to show all the bus option that i may take
+            }
+                
+            content_element.innerHTML = stringContent;
+        }
+        
+        function tellWhenNextLoad()
+        {
+            const tellWhenNext = document.getElementById("tellWhenNext");
+            
+            tellWhenNext.innerHTML = showing.tellWhenNextText;
+            
+            //only have change if have class today and have class tomorrow, and the last class of today had ended
+            tellWhenNext.onclick = () => 
+            {
+                change(null, "today and tomorrow switch");
+                showing.classBusOffSetTracker = 0;
+            };
+        }
+        
+        function classOrBusAdjustLoad()
+        {
+            const adjustText = document.getElementById("adjustText");
+            
+            let textContentFinalString = "";
+            
+            textContentFinalString += `${num2OrdinalNum(showing.showingIndex + showing.classBusOffSetTracker + 1)} class`;
+            
+            //if the last class had not end yet or tomorrow have no class
+            //also for class change, change for having class to having no class, and the opposite
+            if(!(time.currentBusOrClassIndexToday === -1 && time.dayOfWeekNext !== time.dayOfWeek) || dataSave.classList[dayResetWhenOverFlow(time.dayOfWeek + 1)].length === 0)// last class still not end
+            { //litterally just ctrl c ctrl v from a function under lol
+                if(time.currentBusOrClassIndexToday !== -1) //have class
+                {
+                    if(showing.classBusOffSetTracker === 0)
+                    {
+                        textContentFinalString += ", current class";
+                    }
+                    else if(showing.classBusOffSetTracker === -1)
+                    {
+                        textContentFinalString += ", last class";
+                    }
+                    else if(showing.classBusOffSetTracker === 1)
+                    {
+                        textContentFinalString += ", next class";
+                    }
+                    else if(showing.classBusOffSetTracker <= -2)
+                    {
+                        textContentFinalString += `, ${Math.abs(showing.classBusOffSetTracker)} class before current`;
+                    }
+                    else if(showing.classBusOffSetTracker >= 2)
+                    {
+                        textContentFinalString += `, ${showing.classBusOffSetTracker} class after current`;
+                    }
+                }
+                else if(time.currentBusOrClassIndexToday === -1) //don't have class
+                {
+                    if(showing.classBusOffSetTracker === 0)
+                    {
+                        textContentFinalString += ", next class";
+                    }
+                    else if(showing.classBusOffSetTracker === -1)
+                    {
+                        textContentFinalString += ", last class";
+                    }
+                    else if(showing.classBusOffSetTracker <= -2)
+                    {
+                        textContentFinalString += `, ${Math.abs(showing.classBusOffSetTracker) - 1} before last class`;
+                    }
+                    else if(showing.classBusOffSetTracker >= 1)
+                    {
+                        textContentFinalString += `, ${showing.classBusOffSetTracker} after next class`;
+                    }
+                }
+            }
+            
+            if(showing.showingIndex + showing.classBusOffSetTracker === dataSave.classList[showing.showingDayNum].length - 1)
+            {
+                textContentFinalString += ", last class";
+            }
+            
+            adjustText.textContent = textContentFinalString;
+        }
+        
+        function classBusStatusLoad()
+        {
+            const classBusStatus = document.getElementById("classBusStatus");
+            
+            if(time.currentBusOrClassIndexToday === -1)
+            {
+                classBusStatus.textContent = "No Class Now";
+            }
+            else
+            {
+                classBusStatus.textContent = "Class in session";
+            }
+        }
+        
+        function setupModeSwicth()
+        {
+            const modeSwitch = document.getElementById("modeSwitch");
+            
+            if(dataSave.switchVal === "class")
+            {
+                modeSwitch.textContent = "BUS";
+            }
+            else if(dataSave.switchVal === "bus")
+            {
+                modeSwitch.textContent = "CLASS";
+            }
+        }
+        
+        
+        // loading edit element function, must have the needed HTML to function
+        
+        function editModeNameLoad()
+        {
+            document.getElementById("modeName").textContent = `Editing ${dataSave.switchVal.toLocaleUpperCase()}:`;
+        }
+        
+        function dayOfWeekChange(changeOrNot)
+        {
+            //if changeOrNot is true then rotate tothe next day and display it, else only display
+            
+            if(changeOrNot)
+            {
+                edit.dayOfWeekTracker = dayResetWhenOverFlow(edit.dayOfWeekTracker + 1);
+                
+                if(edit.classBusIndexTracker < 0)
+                {
+                    edit.classBusIndexTracker = 0;
+                }
+                else if(edit.classBusIndexTracker > (dataSave.classList[edit.dayOfWeekTracker].length - 1))
+                {
+                    edit.classBusIndexTracker = dataSave.classList[edit.dayOfWeekTracker].length - 1;
+                }
+            }
+            
+            document.getElementById("dayOfWeekChangeForEdit").textContent = dayNum2Name(edit.dayOfWeekTracker);
+            
+            loadContent = true;
+        }
+        
+        function loadEditContent()
+        {
+            const content_element = document.getElementById("content");
+            let stringContent = "";
+            
+            
+            if(dataSave.switchVal === "class")
+            {
+                const currentClass = dataSave.classList[edit.dayOfWeekTracker][edit.classBusIndexTracker];
+                
+                if(currentClass !== undefined && !edit.addNewMode)
+                {
+                    stringContent += `<lable class="editingInputLable">Class name:</lable><br><input id="name" class="editingInput" type="text" value="${currentClass.name}"><br>`;
+                    stringContent += `<lable class="editingInputLable">Class code:</lable><br><input id="code" class="editingInput" type="text" value="${currentClass.code}"><br>`;
+                    stringContent += `<lable class="editingInputLable">Teacher:</lable><br><input id="teacher" class="editingInput" type="text" value="${currentClass.teacher}"><br>`;
+                    stringContent += `<lable class="editingInputLable">Teacher's email:</lable><br><input id="email" class="editingInput" type="email" value="${currentClass.email}"><br>`;
+                    stringContent += `<lable class="editingInputLable">Teacher's phone number:</lable><br><input id="phone" class="editingInput" type="tel" value="${currentClass.phone}"><br>`;
+                    stringContent += `<lable class="editingInputLable">Time start:</lable><br><input id="timeStart" class="editingInput" type="time" value="${currentClass.timeStart.slice(0, 5)}"><br>`;
+                    stringContent += `<lable class="editingInputLable">Time end:</lable><br><input id="timeEnd" class="editingInput" type="time" value="${currentClass.timeEnd.slice(0, 5)}"><br>`;
+                    stringContent += `<lable class="editingInputLable">Location:</lable><br><input id="location" class="editingInput" type="text" value="${currentClass.location}"><br>`;
+                }
+                else if(edit.addNewMode)
+                {
+                    stringContent += `<lable class="editingInputLable">Class name:</lable><br><input id="name" class="editingInput" type="text"><br>`;
+                    stringContent += `<lable class="editingInputLable">Class code:</lable><br><input id="code" class="editingInput" type="text"><br>`;
+                    stringContent += `<lable class="editingInputLable">Teacher:</lable><br><input id="teacher" class="editingInput" type="text"><br>`;
+                    stringContent += `<lable class="editingInputLable">Teacher's email:</lable><br><input id="email" class="editingInput" type="email"><br>`;
+                    stringContent += `<lable class="editingInputLable">Teacher's phone number:</lable><br><input id="phone" class="editingInput" type="tel"><br>`;
+                    stringContent += `<lable class="editingInputLable">Time start:</lable><br><input id="timeStart" class="editingInput" type="time"><br>`;
+                    stringContent += `<lable class="editingInputLable">Time end:</lable><br><input id="timeEnd" class="editingInput" type="time"><br>`;
+                    stringContent += `<lable class="editingInputLable">Location:</lable><br><input id="location" class="editingInput" type="text"><br>`;
+                }
+                
+                stringContent += "<br>";
+                
+                if(!edit.addNewMode)
+                {
+                    if(dataSave.classList[edit.dayOfWeekTracker].length !== 0)
+                    {
+                        stringContent += `<button class="editingButtonContent" style="margin-right:1em" onclick="updateEditClassOrBus()">Update class</button>`;
+                    }
+
+                    stringContent += `<button class="editingButtonContent" onclick="addNewClassBus()">Add new class</button>`;
+
+                    if(dataSave.classList[edit.dayOfWeekTracker].length !== 0)
+                    {
+                        stringContent += `<button class="editingButtonContent" style="margin-left:1em" onclick="deleteClassOrBus()">Delete</button>`;
+                    }
+                }
+                else if(edit.addNewMode)
+                {//need change
+                    stringContent += `<button class="editingButtonContent" style="margin-right:1em" onclick="addNewClassOrBus()">Add class</button>`;
+                    stringContent += `<button class="editingButtonContent" onclick="addNewClassBus()">Cancel</button>`;
+                }
+            }
+            else if(dataSave.switchVal === "bus")
+            {
+                //stuff
+            }
+            
+            content_element.innerHTML = stringContent;
+        }
+        
+        function loadAdjustArrow()
+        {
+            const backArrow = document.getElementById("backButton");
+            const nextArrow = document.getElementById("nextButton");
+            
+            if(edit.addNewMode || dataSave.classList[edit.dayOfWeekTracker].length === 0)
+            {
+                backArrow.style.display = "none";
+                nextArrow.style.display = "none";
+            }
+            else
+            {
+                if(edit.classBusIndexTracker === 0)
+                {
+                    backArrow.style.display = "none";
+                }
+                else
+                {
+                    backArrow.style.display = "inline-block";
+                }
+
+                if(edit.classBusIndexTracker === dataSave.classList[edit.dayOfWeekTracker].length - 1)
+                {
+                    nextArrow.style.display = "none";
+                }
+                else
+                {
+                    nextArrow.style.display = "inline-block";
+                }
+            }
+        }
+        
+        function addNewClassBus()
+        {
+            edit.addNewMode = !edit.addNewMode;
+            loadContent = true;
+        }
+        
+        
+        // initialize codes
+        
+        dataSave.init();
+        dataSave.pull();
+        
+        
+        showing.init();
+        
+        
+        setInterval(() => 
+        {
+            time.update();
+            findShowingNumAndIndex();
+            
+            if(changeMode)
+            {
+                document.body.innerHTML = giveHtmlString(edit.modeOnCheck);
+                
+                changeMode = false;
+            }
+            
+            if(!edit.modeOnCheck && ((dataSave.switchVal === "class" && showing.haveAnyClass) || (dataSave.switchVal === "bus" && showing.haveAnyBus)))
+            {
+                time.timer();
+            }
+            
+            
+            if(loadContent)
+            {
+                if(edit.modeOnCheck)
+                {
+                    editModeNameLoad();
+                    
+                    dayOfWeekChange(false);
+                    
+                    loadAdjustArrow();
+                    
+                    loadEditContent();
+                }
+                else
+                {
+                    if((dataSave.switchVal === "class" && showing.haveAnyClass) || (dataSave.switchVal === "bus" && showing.haveAnyBus))
+                    {
+                        loadContentWhenNotEdit();
+                        
+                        classOrBusAdjustLoad();
+                        
+                        tellWhenNextLoad();
+                        
+                        classBusStatusLoad();
+                    }
+                }
+                
+                setupModeSwicth();
+                
+                loadContent = false;
+            }
+        }, 256);
+
+        setTimeout(() =>
+        {
+            if(!dataSave.how2UseShown)
+            {
+                how2UseAlert(false);
+
+                dataSave.how2UseShown = true;
+
+                dataSave.push("how2UseShown");
+            }
+        }, 1024);
+    </script>
+</body>
+</html>
